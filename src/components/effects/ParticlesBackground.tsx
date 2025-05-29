@@ -11,11 +11,8 @@ const ParticlesBackground: React.FC = () => {
     const newElements: React.JSX.Element[] = [];
 
     for (let i = 0; i < numParticles; i++) {
-      // Determine particle type: mostly dots, some streaks
-      let particleTypeClass = `p${Math.floor(Math.random() * 3) + 1}`; // p1, p2, or p3 for dots
-      if (Math.random() < 0.15) { // 15% chance for a streaky particle
-        particleTypeClass = 'p4';
-      }
+      // Determine particle type: only circular dot particles
+      const particleTypeClass = `p${Math.floor(Math.random() * 3) + 1}`; // p1, p2, or p3 for dots
 
       const style: React.CSSProperties = {
         left: `${Math.random() * 100}%`, // Random horizontal start position
