@@ -26,7 +26,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased text-sm`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased text-sm`} suppressHydrationWarning>
         <ArcodeProvider>
           {children}
           <Toaster />
