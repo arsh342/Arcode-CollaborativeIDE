@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle, Zap, Users, Code, Bot, ShieldCheck, Cloud } from 'lucide-react';
-import HeroNavbar from '@/components/layout/HeroNavbar'; // We'll create this
+import HeroNavbar from '@/components/layout/HeroNavbar'; 
 
 const features = [
   {
@@ -54,7 +54,7 @@ export default function HeroPage() {
       <HeroNavbar />
 
       {/* Hero Section */}
-      <section className="py-20 md:py-32 bg-gradient-to-br from-primary/10 via-background to-background">
+      <section className="py-20 md:py-32 bg-gradient-to-br from-primary/20 via-background to-background/90"> {/* Updated gradient */}
         <div className="container mx-auto px-6 text-center">
           <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6">
             Build, Collaborate, Innovate with <span className="text-primary">Arcode</span>

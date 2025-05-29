@@ -1,3 +1,4 @@
+// src/components/arcode/MonacoEditorWrapper.tsx
 "use client";
 
 import React, { useRef, useEffect } from 'react';
@@ -39,7 +40,7 @@ const MonacoEditorWrapper: React.FC<MonacoEditorWrapperProps> = ({ fileId, initi
       height="100%"
       language={language}
       value={initialContent}
-      theme="vs" // or "vs-dark"
+      theme="vs-dark" // Changed to vs-dark
       onMount={handleEditorDidMount}
       onChange={handleEditorChange}
       options={{
