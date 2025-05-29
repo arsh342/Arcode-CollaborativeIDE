@@ -1,7 +1,7 @@
-import DashboardPage from '@/app/dashboard/page';
+import HeroPage from '@/app/hero/page';
 
 export default function HomePage() {
-  // This page will be effectively protected by AuthProvider in RootLayout
-  // and DashboardPage's own auth check.
-  return <DashboardPage />;
+  // This page will now render the HeroPage.
+  // AuthProvider in RootLayout and HeroPage's own logic will handle UI based on auth state.
+  return <HeroPage />;
 }
