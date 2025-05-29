@@ -1,3 +1,5 @@
-export default function Home() {
-  return <></>;
+import ArcodeLayout from '@/components/arcode/ArcodeLayout';
+
+export default function HomePage() {
+  return <ArcodeLayout />;
 }
