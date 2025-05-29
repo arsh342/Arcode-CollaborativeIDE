@@ -6,8 +6,9 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, Zap, Users, Code, Bot, ShieldCheck, Cloud } from 'lucide-react';
+import { Code, Bot, Users, Zap, ShieldCheck, Cloud } from 'lucide-react';
 import HeroNavbar from '@/components/layout/HeroNavbar'; 
+import ParticlesBackground from '@/components/effects/ParticlesBackground'; // Import the new component
 
 const features = [
   {
@@ -54,10 +55,14 @@ export default function HeroPage() {
       <HeroNavbar />
 
       {/* Hero Section */}
-      <section className="py-20 md:py-32 bg-gradient-to-br from-primary/20 via-background to-background/90"> {/* Updated gradient */}
-        <div className="container mx-auto px-6 text-center">
-          <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-sky-400 via-fuchsia-500 to-teal-400 bg-clip-text text-transparent">
-            Build, Collaborate, Innovate with <span className="bg-gradient-to-r from-orange-400 via-pink-500 to-purple-600 bg-clip-text text-transparent">Arcode</span>
+      <section className="relative py-20 md:py-32 bg-gradient-to-br from-primary/20 via-background to-background/90 overflow-hidden"> {/* Added relative and overflow-hidden */}
+        <ParticlesBackground /> {/* Add particles component here */}
+        <div className="container mx-auto px-6 text-center relative z-10"> {/* Ensure content is above particles */}
+          <h1 className="text-4xl md:text-6xl font-bold mb-6 
+                         bg-gradient-to-r from-sky-400 via-fuchsia-500 to-teal-400 
+                         dark:from-sky-300 dark:via-fuchsia-400 dark:to-teal-300
+                         bg-clip-text text-transparent">
+            Build, Collaborate, Innovate with <span className="bg-gradient-to-r from-orange-400 via-pink-500 to-purple-600 dark:from-orange-300 dark:via-pink-400 dark:to-purple-500 bg-clip-text text-transparent">Arcode</span>
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">
             The next-generation collaborative IDE, supercharged by AI. Streamline your development workflow, from idea to deployment.
@@ -84,7 +89,7 @@ export default function HeroPage() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-16 md:py-24 bg-card">
+      <section id="features" className="py-16 md:py-24 bg-card relative z-10"> {/* Ensure this section is above any potential overlap */}
         <div className="container mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">Why Choose Arcode?</h2>
@@ -111,7 +116,7 @@ export default function HeroPage() {
       </section>
 
       {/* Call to Action Section */}
-      <section className="py-16 md:py-24 bg-background">
+      <section className="py-16 md:py-24 bg-background relative z-10"> {/* Ensure this section is above any potential overlap */}
         <div className="container mx-auto px-6 text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-6">
             Ready to Elevate Your Coding?
@@ -126,7 +131,7 @@ export default function HeroPage() {
       </section>
 
       {/* Footer */}
-      <footer className="py-8 bg-muted border-t">
+      <footer className="py-8 bg-muted border-t relative z-10"> {/* Ensure this section is above any potential overlap */}
         <div className="container mx-auto px-6 text-center text-muted-foreground">
           <p>&copy; {new Date().getFullYear()} Arcode. All rights reserved.</p>
           <p className="text-sm mt-1">Crafted with ❤️ by Firebase Studio</p>
