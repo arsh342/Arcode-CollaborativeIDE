@@ -1,10 +1,10 @@
+import type { Timestamp, FieldValue } from 'firebase/firestore';
+
 export interface ProjectType {
-  id: string;
+  id: string; // Firestore document ID
   name: string;
   description: string;
   imageUrl: string;
-  lastModified: string;
-  imageAiHint?: string; // For placeholder images, e.g., "website wireframe"
+  lastModified: Timestamp | FieldValue | string; // Firestore Timestamp on read/write, string for display
+  imageAiHint?: string;
 }
-
-    

@@ -1,7 +1,7 @@
 // src/app/dashboard/page.tsx
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -10,16 +10,11 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Briefcase, Settings, PlusCircle, FolderOpen, ExternalLink } from 'lucide-react';
+import { Briefcase, Settings, PlusCircle, FolderOpen, ExternalLink, Loader2 } from 'lucide-react';
 import type { ProjectType } from '@/types/dashboard';
 import { useToast } from "@/hooks/use-toast";
-
-const initialProjects: ProjectType[] = [
-  { id: 'proj1', name: 'E-commerce Platform', description: 'A full-featured online store with payment integration and admin panel.', imageUrl: 'https://placehold.co/600x400.png', lastModified: '2 days ago', imageAiHint: 'online store' },
-  { id: 'proj2', name: 'Blog CMS', description: 'Content management system for creating and managing blog posts efficiently.', imageUrl: 'https://placehold.co/600x400.png', lastModified: '5 days ago', imageAiHint: 'writing content' },
-  { id: 'proj3', name: 'Task Manager App', description: 'A collaborative tool for tracking project tasks, assignments, and deadlines.', imageUrl: 'https://placehold.co/600x400.png', lastModified: '1 week ago', imageAiHint: 'tasks list' },
-  { id: 'proj4', name: 'Portfolio Website', description: 'Personal portfolio to showcase projects and skills with a modern design.', imageUrl: 'https://placehold.co/600x400.png', lastModified: '2 weeks ago', imageAiHint: 'personal website' },
-];
+import { db } from '@/firebase/config';
+import { collection, addDoc, getDocs, query, orderBy, serverTimestamp, Timestamp } from 'firebase/firestore';
 
 interface ProjectCardProps {
   project: ProjectType;
@@ -27,6 +22,16 @@ interface ProjectCardProps {
 }
 
 const ProjectCard: React.FC<ProjectCardProps> = ({ project, onOpenProject }) => {
+  const getLastModifiedString = (lastModified: ProjectType['lastModified']): string => {
+    if (lastModified instanceof Timestamp) {
+      return lastModified.toDate().toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+    if (typeof lastModified === 'string') {
+      return lastModified; // Already a string, e.g. "2 days ago" from old hardcoded data
+    }
+    return 'Just now'; // Fallback for serverTimestamp() before fetch
+  };
+  
   return (
     <Card className="flex flex-col overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
       <CardHeader className="p-0">
@@ -45,7 +50,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onOpenProject }) => 
         <CardDescription className="text-sm text-muted-foreground mb-2 h-10 overflow-hidden text-ellipsis">
           {project.description}
         </CardDescription>
-        <p className="text-xs text-muted-foreground">Last modified: {project.lastModified}</p>
+        <p className="text-xs text-muted-foreground">Last modified: {getLastModifiedString(project.lastModified)}</p>
       </CardContent>
       <CardFooter className="p-4 border-t">
         <Button onClick={() => onOpenProject(project.id)} className="w-full" variant="outline">
@@ -59,24 +64,22 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onOpenProject }) => 
 interface CreateProjectDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreateProject: (projectData: { name: string, description: string }) => void;
+  onCreateProject: (projectData: { name: string, description: string }) => Promise<void>;
+  isCreating: boolean;
 }
 
-const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({ open, onOpenChange, onCreateProject }) => {
+const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({ open, onOpenChange, onCreateProject, isCreating }) => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const { toast } = useToast();
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (name.trim() && description.trim()) {
-      onCreateProject({ name, description });
-      toast({
-        title: "Project Created",
-        description: `${name} has been successfully created.`,
-      });
+      await onCreateProject({ name, description });
+      // Toast is handled in the parent component after successful creation
       setName('');
       setDescription('');
-      onOpenChange(false); // Close dialog on successful creation
+      onOpenChange(false);
     } else {
       toast({
         title: "Error",
@@ -106,6 +109,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({ open, onOpenC
               onChange={(e) => setName(e.target.value)}
               className="col-span-3"
               placeholder="My Awesome Project"
+              disabled={isCreating}
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
@@ -118,12 +122,16 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({ open, onOpenC
               onChange={(e) => setDescription(e.target.value)}
               className="col-span-3"
               placeholder="A brief description of your project."
+              disabled={isCreating}
             />
           </div>
         </div>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button type="submit" onClick={handleSubmit} disabled={!name.trim() || !description.trim()}>Create Project</Button>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isCreating}>Cancel</Button>
+          <Button type="submit" onClick={handleSubmit} disabled={!name.trim() || !description.trim() || isCreating}>
+            {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isCreating ? "Creating..." : "Create Project"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -135,28 +143,68 @@ export default function DashboardPage() {
   const [projects, setProjects] = useState<ProjectType[]>([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCreating, setIsCreating] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
 
-  useEffect(() => {
-    // Simulate fetching projects
-    setTimeout(() => {
-      setProjects(initialProjects);
+  const fetchProjects = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const projectsCollection = collection(db, 'projects');
+      const q = query(projectsCollection, orderBy('lastModified', 'desc'));
+      const querySnapshot = await getDocs(q);
+      const fetchedProjects: ProjectType[] = [];
+      querySnapshot.forEach((doc) => {
+        fetchedProjects.push({ id: doc.id, ...doc.data() } as ProjectType);
+      });
+      setProjects(fetchedProjects);
+    } catch (error) {
+      console.error("Error fetching projects: ", error);
+      toast({
+        title: "Error Fetching Projects",
+        description: "Could not load projects from the database.",
+        variant: "destructive",
+      });
+    } finally {
       setIsLoading(false);
-    }, 500);
-  }, []);
+    }
+  }, [toast]);
 
-  const handleCreateProject = (projectData: { name: string, description: string }) => {
-    const newProject: ProjectType = {
-      id: String(Date.now()), // Using timestamp as a simple unique ID
-      name: projectData.name,
-      description: projectData.description,
-      imageUrl: `https://placehold.co/600x400.png`,
-      lastModified: new Date().toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' }),
-      imageAiHint: projectData.name.toLowerCase().split(' ').slice(0, 2).join(' ') || 'project concept'
-    };
-    setProjects(prevProjects => [newProject, ...prevProjects]);
-    // Toast is handled in dialog
+  useEffect(() => {
+    fetchProjects();
+  }, [fetchProjects]);
+
+  const handleCreateProject = async (projectData: { name: string, description: string }) => {
+    setIsCreating(true);
+    try {
+      const newProjectData = {
+        name: projectData.name,
+        description: projectData.description,
+        imageUrl: `https://placehold.co/600x400.png`, // Default placeholder
+        lastModified: serverTimestamp(),
+        imageAiHint: projectData.name.toLowerCase().split(' ').slice(0, 2).join(' ') || 'project concept'
+      };
+      const docRef = await addDoc(collection(db, 'projects'), newProjectData);
+      
+      // Add new project to local state optimistically or refetch
+      // For simplicity, we'll refetch. For better UX, add locally then confirm.
+      // setProjects(prevProjects => [{ id: docRef.id, ...newProjectData, lastModified: new Date().toISOString() }, ...prevProjects]);
+      await fetchProjects(); // Refetch to get the serverTimestamp resolved
+      
+      toast({
+        title: "Project Created",
+        description: `${projectData.name} has been successfully created.`,
+      });
+    } catch (error) {
+      console.error("Error creating project: ", error);
+      toast({
+        title: "Error Creating Project",
+        description: "Could not save the project to the database.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   const handleOpenProject = (projectId: string) => {
@@ -180,12 +228,6 @@ export default function DashboardPage() {
               <FolderOpen className="mr-2 h-4 w-4" />
               My Projects
             </Button>
-            {/* Future nav items
-            <Button variant="ghost" className="w-full justify-start text-sm text-muted-foreground hover:text-foreground">
-              <Users className="mr-2 h-4 w-4" />
-              Teams
-            </Button>
-            */}
           </nav>
         </div>
         <div>
@@ -242,9 +284,12 @@ export default function DashboardPage() {
           )}
         </div>
       </main>
-      <CreateProjectDialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen} onCreateProject={handleCreateProject} />
+      <CreateProjectDialog 
+        open={isCreateDialogOpen} 
+        onOpenChange={setIsCreateDialogOpen} 
+        onCreateProject={handleCreateProject}
+        isCreating={isCreating}
+      />
     </div>
   );
 }
-
-    
