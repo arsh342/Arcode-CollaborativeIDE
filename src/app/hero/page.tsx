@@ -56,8 +56,8 @@ export default function HeroPage() {
       {/* Hero Section */}
       <section className="py-20 md:py-32 bg-gradient-to-br from-primary/20 via-background to-background/90"> {/* Updated gradient */}
         <div className="container mx-auto px-6 text-center">
-          <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6">
-            Build, Collaborate, Innovate with <span className="text-primary">Arcode</span>
+          <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            Build, Collaborate, Innovate with <span className="bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent">Arcode</span>
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">
             The next-generation collaborative IDE, supercharged by AI. Streamline your development workflow, from idea to deployment.
