@@ -1,7 +1,7 @@
 // src/firebase/config.ts
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import { getFirestore, Firestore } from 'firebase/firestore';
-// import { getAnalytics } from "firebase/analytics"; // Uncomment if you need analytics
+import { getAuth, Auth } from 'firebase/auth'; // Added Auth import
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -15,16 +15,15 @@ const firebaseConfig = {
 
 let app: FirebaseApp;
 let db: Firestore;
+let auth: Auth; // Added Auth instance
 
 if (getApps().length === 0) {
   app = initializeApp(firebaseConfig);
-  // if (typeof window !== 'undefined') { // Uncomment if you need analytics
-  //   getAnalytics(app);
-  // }
 } else {
   app = getApps()[0];
 }
 
 db = getFirestore(app);
+auth = getAuth(app); // Initialize Auth
 
-export { app, db };
+export { app, db, auth }; // Export auth

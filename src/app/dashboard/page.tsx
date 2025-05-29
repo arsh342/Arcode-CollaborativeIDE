@@ -10,11 +10,12 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Briefcase, Settings, PlusCircle, FolderOpen, ExternalLink, Loader2 } from 'lucide-react';
+import { Briefcase, Settings, PlusCircle, FolderOpen, ExternalLink, Loader2, LogOut } from 'lucide-react';
 import type { ProjectType } from '@/types/dashboard';
 import { useToast } from "@/hooks/use-toast";
 import { db } from '@/firebase/config';
-import { collection, addDoc, getDocs, query, orderBy, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, orderBy, serverTimestamp, Timestamp, where } from 'firebase/firestore';
+import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
 
 interface ProjectCardProps {
   project: ProjectType;
@@ -27,9 +28,9 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onOpenProject }) => 
       return lastModified.toDate().toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' });
     }
     if (typeof lastModified === 'string') {
-      return lastModified; // Already a string, e.g. "2 days ago" from old hardcoded data
+      return lastModified; 
     }
-    return 'Just now'; // Fallback for serverTimestamp() before fetch
+    return 'Just now'; 
   };
   
   return (
@@ -76,7 +77,6 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({ open, onOpenC
   const handleSubmit = async () => {
     if (name.trim() && description.trim()) {
       await onCreateProject({ name, description });
-      // Toast is handled in the parent component after successful creation
       setName('');
       setDescription('');
       onOpenChange(false);
@@ -146,12 +146,15 @@ export default function DashboardPage() {
   const [isCreating, setIsCreating] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+  const { user, loading: authLoading, logout } = useAuth(); // Use useAuth
 
   const fetchProjects = useCallback(async () => {
+    if (!user) return; // Don't fetch if no user
     setIsLoading(true);
     try {
       const projectsCollection = collection(db, 'projects');
-      const q = query(projectsCollection, orderBy('lastModified', 'desc'));
+      // Query projects only for the current user
+      const q = query(projectsCollection, where("userId", "==", user.uid) ,orderBy('lastModified', 'desc'));
       const querySnapshot = await getDocs(q);
       const fetchedProjects: ProjectType[] = [];
       querySnapshot.forEach((doc) => {
@@ -168,29 +171,33 @@ export default function DashboardPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [toast, user]);
 
   useEffect(() => {
-    fetchProjects();
-  }, [fetchProjects]);
+    if (!authLoading && user) {
+      fetchProjects();
+    } else if (!authLoading && !user) {
+      router.push('/login'); // Redirect if not logged in and not loading
+    }
+  }, [authLoading, user, fetchProjects, router]);
 
   const handleCreateProject = async (projectData: { name: string, description: string }) => {
+    if (!user) {
+        toast({ title: "Not Authenticated", description: "You must be logged in to create a project.", variant: "destructive"});
+        return;
+    }
     setIsCreating(true);
     try {
       const newProjectData = {
         name: projectData.name,
         description: projectData.description,
-        imageUrl: `https://placehold.co/600x400.png`, // Default placeholder
+        imageUrl: `https://placehold.co/600x400.png`,
         lastModified: serverTimestamp(),
+        userId: user.uid, // Store userId with the project
         imageAiHint: projectData.name.toLowerCase().split(' ').slice(0, 2).join(' ') || 'project concept'
       };
       const docRef = await addDoc(collection(db, 'projects'), newProjectData);
-      
-      // Add new project to local state optimistically or refetch
-      // For simplicity, we'll refetch. For better UX, add locally then confirm.
-      // setProjects(prevProjects => [{ id: docRef.id, ...newProjectData, lastModified: new Date().toISOString() }, ...prevProjects]);
-      await fetchProjects(); // Refetch to get the serverTimestamp resolved
-      
+      await fetchProjects(); 
       toast({
         title: "Project Created",
         description: `${projectData.name} has been successfully created.`,
@@ -215,6 +222,20 @@ export default function DashboardPage() {
     router.push('/settings');
   };
 
+  const handleLogout = async () => {
+    await logout();
+    toast({title: "Logged Out", description: "You have been successfully logged out."});
+  };
+  
+  // If auth is loading, or if not loading and no user (which AuthProvider should redirect), show loader.
+  if (authLoading || (!authLoading && !user)) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-background">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen bg-background">
       <aside className="w-60 bg-card text-card-foreground p-4 flex flex-col justify-between border-r shadow-sm">
@@ -228,12 +249,16 @@ export default function DashboardPage() {
               <FolderOpen className="mr-2 h-4 w-4" />
               My Projects
             </Button>
+             <Button variant="ghost" className="w-full justify-start text-sm text-muted-foreground hover:text-foreground" onClick={handleOpenSettings}>
+              <Settings className="mr-2 h-4 w-4" />
+              Settings
+            </Button>
           </nav>
         </div>
         <div>
-          <Button variant="ghost" className="w-full justify-start text-sm text-muted-foreground hover:text-foreground" onClick={handleOpenSettings}>
-            <Settings className="mr-2 h-4 w-4" />
-            Settings
+          <Button variant="outline" className="w-full justify-start text-sm text-destructive hover:bg-destructive/10" onClick={handleLogout}>
+            <LogOut className="mr-2 h-4 w-4" />
+            Logout
           </Button>
         </div>
       </aside>

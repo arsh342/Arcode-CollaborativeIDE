@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { ArcodeProvider } from '@/contexts/ArcodeContext';
+import { AuthProvider } from '@/contexts/AuthContext'; // Import AuthProvider
 import { Toaster } from "@/components/ui/toaster";
 
 const geistSans = Geist({
@@ -27,10 +28,12 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased text-sm`} suppressHydrationWarning>
-        <ArcodeProvider>
-          {children}
-          <Toaster />
-        </ArcodeProvider>
+        <AuthProvider> {/* Wrap with AuthProvider */}
+          <ArcodeProvider>
+            {children}
+            <Toaster />
+          </ArcodeProvider>
+        </AuthProvider>
       </body>
     </html>
   );

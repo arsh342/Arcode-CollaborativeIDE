@@ -4,44 +4,56 @@
 import React, { useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import ArcodeLayout from '@/components/arcode/ArcodeLayout';
-import { useArcodeContext } from '@/hooks/useArcodeContext'; // Assuming you might want to use this later
+import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
+import { Loader2 } from 'lucide-react';
 
 export default function ProjectIdePage() {
   const params = useParams();
   const router = useRouter();
   const projectId = params.projectId as string;
+  const { user, loading: authLoading } = useAuth(); // Use useAuth
   
-  // const { setActiveProject } = useArcodeContext(); // Example: if context had a way to set project
-
   useEffect(() => {
-    if (!projectId) {
-      // Handle case where projectId is not available, maybe redirect or show error
-      // For now, let's assume it's always there due to route structure
-      // router.push('/dashboard'); // Or some error page
+    if (authLoading) return; // Wait for auth state to load
+
+    if (!user) {
+      router.push('/login'); // Redirect if not logged in
       return;
     }
-    // Here you would typically load project-specific data or files into your ArcodeContext
-    // For example: setActiveProject(projectId) or loadFilesForProject(projectId)
-    // Since ArcodeContext currently uses static initialFiles, ArcodeLayout will show those.
-    // This console.log indicates where project-specific logic would go.
-    console.log(`IDE page for project: ${projectId}. ArcodeLayout will display default files.`);
+    
+    if (!projectId) {
+      // This case should ideally not happen if routing is set up correctly
+      // and user navigates from dashboard.
+      console.warn("Project ID missing, redirecting to dashboard.");
+      router.push('/dashboard');
+      return;
+    }
+    
+    console.log(`IDE page for project: ${projectId}. User: ${user.email}`);
+    // Future: Load project-specific files based on projectId and user.
+    // For now, ArcodeLayout will display default files from ArcodeContext.
 
-  }, [projectId, router]);
+  }, [projectId, router, user, authLoading]);
 
 
-  if (!projectId) {
-    // This is a fallback, ideally handled by routing or a loading state from data fetching
+  if (authLoading || (!authLoading && !user)) {
+    return (
+        <div className="flex items-center justify-center h-screen bg-background">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        </div>
+    );
+  }
+  
+  if (!projectId && !authLoading && user) {
+     // This state might occur briefly if projectId is not yet available from params
+     // but auth is resolved.
+     // Or if redirection from useEffect above hasn't completed.
     return (
         <div className="flex items-center justify-center h-screen text-xl">
-            Project ID not found. Redirecting...
+            Loading project details or redirecting...
         </div>
     );
   }
 
-  // ArcodeLayout will be rendered using the global ArcodeProvider from RootLayout.
-  // The files displayed will be from the static initialFiles in ArcodeContext.
-  // Future work: Make ArcodeContext dynamic to load files based on projectId.
   return <ArcodeLayout />;
 }
-
-    
