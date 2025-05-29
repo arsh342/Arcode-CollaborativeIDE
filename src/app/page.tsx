@@ -1,5 +1,5 @@
-import ArcodeLayout from '@/components/arcode/ArcodeLayout';
+import DashboardPage from '@/app/dashboard/page';
 
 export default function HomePage() {
-  return <ArcodeLayout />;
+  return <DashboardPage />;
 }
