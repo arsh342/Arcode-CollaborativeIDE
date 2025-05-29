@@ -34,24 +34,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (loading) return;
 
     const isAuthPage = pathname === '/login' || pathname === '/signup' || pathname === '/forgot-password';
-    // The root path '/' now serves the hero page and should be publicly accessible.
-    // '/hero' is an alias or direct route to the same content.
-    const isPublicEntryPoint = pathname === '/' || pathname === '/hero';
+    // Explicitly define the main landing page (hero page) path.
+    const isLandingPage = pathname === '/'; 
 
+    // Define base paths for routes that are strictly protected.
+    const protectedRouteBases = ['/dashboard', '/settings'];
+    // A route is protected if it's one of the protected bases or an IDE page, AND it's NOT the landing page.
+    const isStrictlyProtectedRoute = 
+      (protectedRouteBases.some(routeBase => pathname.startsWith(routeBase)) || pathname.startsWith('/ide/'))
+      && !isLandingPage;
 
-    // Define protected routes clearly
-    const protectedRoutes = ['/dashboard', '/settings']; // Base paths for protected routes
-    // Check if current pathname starts with any of the protected base paths or /ide/
-    const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route)) || pathname.startsWith('/ide/');
-
-    if (!user && isProtectedRoute) {
+    if (!user && isStrictlyProtectedRoute) {
+      // If user is not logged in and tries to access a strictly protected route, redirect to login.
       router.push('/login');
     } else if (user && isAuthPage) {
-      // If user is logged in and tries to access login/signup, redirect to dashboard
+      // If user is logged in and tries to access an authentication page (login, signup), redirect to dashboard.
       router.push('/dashboard');
     }
-    // No automatic redirection from public entry points like '/' or '/hero' based on auth state.
-    // Navigation from these pages is handled by user interaction (e.g., "Go to Dashboard" button).
+    // No automatic redirection from the landing page based on auth state.
+    // Navigation from the landing page is handled by user interaction (e.g., "Go to Dashboard" or "Sign In" buttons).
 
   }, [user, loading, router, pathname]);
 
@@ -66,8 +67,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
   
-  // Show loader only during initial auth state check
-  // or if trying to access a page before auth state is resolved for redirection.
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-background">
