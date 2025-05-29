@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -11,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Briefcase, Settings, PlusCircle, FolderOpen, ExternalLink } from 'lucide-react';
 import type { ProjectType } from '@/types/dashboard';
+import { useToast } from "@/hooks/use-toast";
 
 const initialProjects: ProjectType[] = [
   { id: 'proj1', name: 'E-commerce Platform', description: 'A full-featured online store with payment integration and admin panel.', imageUrl: 'https://placehold.co/600x400.png', lastModified: '2 days ago', imageAiHint: 'online store' },
@@ -32,8 +34,8 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onOpenProject }) => 
           <Image
             src={project.imageUrl}
             alt={project.name}
-            layout="fill"
-            objectFit="cover"
+            fill
+            style={{objectFit:"cover"}}
             data-ai-hint={project.imageAiHint || "project image"}
           />
         </div>
@@ -63,12 +65,24 @@ interface CreateProjectDialogProps {
 const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({ open, onOpenChange, onCreateProject }) => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const { toast } = useToast();
 
   const handleSubmit = () => {
     if (name.trim() && description.trim()) {
       onCreateProject({ name, description });
+      toast({
+        title: "Project Created",
+        description: `${name} has been successfully created.`,
+      });
       setName('');
       setDescription('');
+      onOpenChange(false); // Close dialog on successful creation
+    } else {
+      toast({
+        title: "Error",
+        description: "Project name and description cannot be empty.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -121,6 +135,8 @@ export default function DashboardPage() {
   const [projects, setProjects] = useState<ProjectType[]>([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
     // Simulate fetching projects
@@ -132,23 +148,23 @@ export default function DashboardPage() {
 
   const handleCreateProject = (projectData: { name: string, description: string }) => {
     const newProject: ProjectType = {
-      id: String(Date.now()),
+      id: String(Date.now()), // Using timestamp as a simple unique ID
       name: projectData.name,
       description: projectData.description,
-      imageUrl: `https://placehold.co/600x400.png`, // Generic placeholder, text could be added
-      lastModified: new Date().toLocaleDateString(),
+      imageUrl: `https://placehold.co/600x400.png`,
+      lastModified: new Date().toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' }),
       imageAiHint: projectData.name.toLowerCase().split(' ').slice(0, 2).join(' ') || 'project concept'
     };
-    setProjects(prevProjects => [newProject, ...prevProjects]); // Add to the beginning
-    setIsCreateDialogOpen(false);
+    setProjects(prevProjects => [newProject, ...prevProjects]);
+    // Toast is handled in dialog
   };
 
   const handleOpenProject = (projectId: string) => {
-    // For now, just log. In a real app, this would navigate to the project's IDE view.
-    // e.g., router.push(`/?project=${projectId}`);
-    console.log("Open project:", projectId);
-    // Potentially redirect to the main IDE page with project context
-    // window.location.href = `/?project=${projectId}`; // Simple redirect for demo
+    router.push(`/ide/${projectId}`);
+  };
+
+  const handleOpenSettings = () => {
+    router.push('/settings');
   };
 
   return (
@@ -173,7 +189,7 @@ export default function DashboardPage() {
           </nav>
         </div>
         <div>
-          <Button variant="ghost" className="w-full justify-start text-sm text-muted-foreground hover:text-foreground">
+          <Button variant="ghost" className="w-full justify-start text-sm text-muted-foreground hover:text-foreground" onClick={handleOpenSettings}>
             <Settings className="mr-2 h-4 w-4" />
             Settings
           </Button>
@@ -230,3 +246,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    

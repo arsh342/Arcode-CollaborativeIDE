@@ -6,3 +6,5 @@ export interface ProjectType {
   lastModified: string;
   imageAiHint?: string; // For placeholder images, e.g., "website wireframe"
 }
+
+    
