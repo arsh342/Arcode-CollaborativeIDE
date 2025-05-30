@@ -18,11 +18,11 @@ body {
     --popover: 0 0% 11%; /* Same as background */
     --popover-foreground: 0 0% 95%;
 
-    --primary: 211 100% 50%; /* #007BFF */
-    --primary-foreground: 0 0% 100%; /* Pure White */
+    --primary: 0 0% 100%; /* White background for primary buttons */
+    --primary-foreground: 211 100% 50%; /* Blue text for primary buttons */
 
-    --secondary: 133 78% 56%; /* #39E75F (Vibrant Green) */
-    --secondary-foreground: 0 0% 100%; /* Pure White */
+    --secondary: 0 0% 100%; /* White background for secondary buttons */
+    --secondary-foreground: 133 78% 56%; /* Green text for secondary buttons */
 
     --muted: 0 0% 20%; /* Lighter shade of new background */
     --muted-foreground: 0 0% 55%; /* #8C8C8C */
@@ -30,18 +30,18 @@ body {
     --accent: 195 100% 60%; /* #33CCFF (Bright Electric Blue) */
     --accent-foreground: 0 0% 10%; /* Dark text for electric blue accent */
 
-    --destructive: 0 100% 65%; /* #FF4C4C (Bright Red) */
-    --destructive-foreground: 0 0% 100%; /* Pure White */
+    --destructive: 0 0% 100%; /* White background for destructive buttons */
+    --destructive-foreground: 0 100% 65%; /* Red text for destructive buttons */
 
     --border: 0 0% 20%; /* Subtle border */
     --input: 0 0% 20%; /* Input field background */
-    --ring: 211 100% 50%; /* Primary color for focus rings */
+    --ring: 211 100% 50%; /* Primary color for focus rings - remains blue */
 
     /* Updated chart colors based on the image */
     --chart-1: 39 100% 58%;   /* Vibrant Orange/Yellow from image (Hex: #FF992A) */
     --chart-2: 320 100% 65%;  /* Bright Pink/Magenta from image (Hex: #FF4DFF) */
     --chart-3: 180 100% 50%;  /* Cyan/Turquoise from image (Hex: #00FFFF) */
-    --chart-4: 133 78% 56%;  /* Vibrant Green from image (same as --secondary) */
+    --chart-4: 133 78% 56%;  /* Vibrant Green from image (same as original --secondary) */
     --chart-5: 220 100% 60%;  /* Deeper Blue from image (Hex: #3366FF) */
     
     --radius: 0.5rem; /* Increased from 0.375rem */
