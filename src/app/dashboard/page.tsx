@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
-import Link from 'next/link'; // Added Link import
+import Link from 'next/link'; 
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Settings, PlusCircle, FolderOpen, ExternalLink, Loader2, LogOut, Code2, Users, Trash2, Copy, Check, MailIcon } from 'lucide-react'; 
+import { Settings, PlusCircle, FolderOpen, ExternalLink, Loader2, Users, Trash2, Copy, Check, MailIcon } from 'lucide-react'; 
 import type { ProjectType } from '@/types/dashboard';
 import { useToast } from "@/hooks/use-toast";
 import { db } from '@/firebase/config';
@@ -619,7 +619,6 @@ export default function DashboardPage() {
         </div>
         <div>
           <Button variant="outline" className="w-full justify-start text-sm text-destructive hover:bg-destructive/10" onClick={handleLogout}>
-            <LogOut className="mr-2 h-4 w-4" />
             Logout
           </Button>
         </div>

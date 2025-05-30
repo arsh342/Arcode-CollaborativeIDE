@@ -6,7 +6,6 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogIn, UserPlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function HeroNavbar() {
@@ -15,8 +14,7 @@ export default function HeroNavbar() {
 
   useEffect(() => {
     const handleScroll = () => {
-      // Adjusted scroll threshold slightly since navbar starts lower
-      if (window.scrollY > 20) { 
+      if (window.scrollY > 10) { // Adjusted scroll threshold as navbar is at top
         setIsScrolled(true);
       } else {
         setIsScrolled(false);
@@ -32,7 +30,7 @@ export default function HeroNavbar() {
   return (
     <header 
       className={cn(
-        "sticky top-[50px] z-50 w-full transition-colors duration-300 ease-in-out",
+        "sticky top-0 z-50 w-full transition-colors duration-300 ease-in-out", // Changed top-[50px] to top-0
         isScrolled 
           ? "bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border"
           : "bg-transparent border-b border-transparent"
@@ -49,16 +47,16 @@ export default function HeroNavbar() {
         </nav>
         <div className="flex flex-1 items-center justify-end space-x-2">
           {!loading && user ? (
-            <Button asChild className="text-base [&_svg]:size-5">
+            <Button asChild className="text-base">
               <Link href="/dashboard">Go to Dashboard</Link>
             </Button>
           ) : !loading ? (
             <>
-              <Button asChild variant="ghost" className="text-base [&_svg]:size-5">
-                <Link href="/login"><LogIn className="mr-2 h-5 w-5"/>Sign In</Link>
+              <Button asChild variant="ghost" className="text-base">
+                <Link href="/login">Sign In</Link>
               </Button>
-              <Button asChild className="text-base [&_svg]:size-5">
-                <Link href="/signup"><UserPlus className="mr-2 h-5 w-5"/>Sign Up</Link>
+              <Button asChild className="text-base">
+                <Link href="/signup">Sign Up</Link>
               </Button>
             </>
           ) : (
