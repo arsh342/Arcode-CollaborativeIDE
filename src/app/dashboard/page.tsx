@@ -51,6 +51,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onOpenProject, onMan
             src={project.imageUrl}
             alt={project.name}
             fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
             style={{objectFit:"cover"}}
             data-ai-hint={project.imageAiHint || "project image"}
           />
