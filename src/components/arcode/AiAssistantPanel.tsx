@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState } from 'react';
@@ -97,26 +98,7 @@ const AiAssistantPanel: React.FC = () => {
             </Button>
           ))}
         </div>
-
-        { (currentAction === "debug" || currentAction === "refactor") && (
-          <div className="space-y-1">
-            <Label htmlFor="additional-input" className="text-xs">{getAdditionalInputLabel()}</Label>
-            <Textarea
-              id="additional-input"
-              value={additionalInput}
-              onChange={(e) => setAdditionalInput(e.target.value)}
-              placeholder={currentAction === "debug" ? "e.g., 'Getting a TypeError on line 10'" : "e.g., 'Convert to async/await and add error handling'"}
-              className="h-20 text-xs"
-              disabled={isLoading}
-            />
-          </div>
-        )}
         
-        <Button onClick={handleAiAction} disabled={isLoading || !activeFile} className="w-full">
-          {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
-          {isLoading ? `Processing ${currentAction}...` : `Run ${currentAction} on current file`}
-        </Button>
-
         {aiResponse && (
           <div className="flex-grow flex flex-col mt-2 overflow-hidden border rounded-md">
             <Label className="text-xs px-3 py-1.5 border-b bg-muted/30">AI Response:</Label>
@@ -125,12 +107,31 @@ const AiAssistantPanel: React.FC = () => {
             </ScrollArea>
           </div>
         )}
-         {!activeFile && (
-          <p className="text-xs text-muted-foreground text-center mt-4">Open a file to use the AI Assistant.</p>
+        {!aiResponse && <div className="flex-grow"></div>} {/* Spacer to push input to bottom */}
+
+         {!activeFile && !aiResponse && (
+          <p className="text-xs text-muted-foreground text-center mt-4 flex-grow flex items-center justify-center">Open a file to use the AI Assistant.</p>
         )}
       </CardContent>
-      <CardFooter className="p-2 border-t">
-        <p className="text-xs text-muted-foreground">AI operates on the currently active file.</p>
+      <CardFooter className="p-3 border-t flex flex-col gap-2">
+        { (currentAction === "debug" || currentAction === "refactor") && (
+            <div className="space-y-1 w-full">
+                <Label htmlFor="additional-input" className="text-xs">{getAdditionalInputLabel()}</Label>
+                <Textarea
+                id="additional-input"
+                value={additionalInput}
+                onChange={(e) => setAdditionalInput(e.target.value)}
+                placeholder={currentAction === "debug" ? "e.g., 'Getting a TypeError on line 10'" : "e.g., 'Convert to async/await and add error handling'"}
+                className="h-20 text-xs"
+                disabled={isLoading}
+                />
+            </div>
+        )}
+        <Button onClick={handleAiAction} disabled={isLoading || !activeFile} className="w-full">
+            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
+            {isLoading ? `Processing ${currentAction}...` : `Run ${currentAction} on current file`}
+        </Button>
+        <p className="text-xs text-muted-foreground text-center w-full">AI operates on the currently active file.</p>
       </CardFooter>
     </Card>
   );
