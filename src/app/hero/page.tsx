@@ -48,7 +48,7 @@ const features = [
   },
 ];
 
-const arcodeVariations = ["Arcode", "Arcøde", "Arcodé", "Λrcode", "Ar코드", "Ar{code}", "Ärcode", "Ārcōde", "Arコーデ", "อาโค้ด"]; // Added "อาโค้ด" (Thai-like)
+const arcodeVariations = ["Arcode", "Arcøde", "Arcodé", "Λrcode", "Ar코드", "Ar{code}", "Ärcode", "Ārcōde", "Arコーデ", "อาโค้ด", "ਅਰਕੋਡ", "आरकोड", "代码弧", "Аркод", "Arkodez"];
 
 export default function HeroPage() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -77,8 +77,9 @@ export default function HeroPage() {
 
   const handleLearnMoreClick = (e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => {
     if (!isScrolled && featuresSectionRef.current) {
-      setIsScrolled(true);
+      setIsScrolled(true); // Ensure section is visible before trying to scroll to it
     }
+    // Allow default anchor link behavior to proceed
   };
   
   const currentArcodeDisplayWord = arcodeVariations[currentArcodeWordIndex];
@@ -87,7 +88,8 @@ export default function HeroPage() {
     <div 
       className="flex flex-col min-h-screen bg-background relative"
       style={{
-        backgroundImage: `linear-gradient(to bottom right, hsl(240, 10%, 15%) 0%, hsl(var(--background)) 60%, hsl(280, 10%, 12%) 100%)`,
+        // Using a dark base with a subtle radial glow from top-center
+        backgroundImage: `radial-gradient(ellipse at top center, hsl(270, 8%, 20%) 0%, hsl(var(--background)) 60%)`,
         backgroundRepeat: 'no-repeat',
         backgroundAttachment: 'fixed', 
       }}
@@ -99,12 +101,12 @@ export default function HeroPage() {
       <section className="relative py-20 md:py-32">
         <div className="container mx-auto px-6 text-center relative z-10">
           <h1 className="text-4xl md:text-6xl font-bold mb-6 
-                         bg-gradient-to-r from-sky-400 via-fuchsia-500 to-teal-400 
-                         dark:from-sky-300 dark:via-fuchsia-400 dark:to-teal-300
+                         bg-gradient-to-r from-sky-400 via-yellow-400 to-pink-500 
+                         dark:from-sky-300 dark:via-yellow-300 dark:to-pink-400
                          bg-clip-text text-transparent">
             Build, Collaborate, Innovate with <span 
               key={currentArcodeDisplayWord} 
-              className="arcode-animated-text bg-gradient-to-r from-orange-400 via-pink-500 to-purple-600 dark:from-orange-300 dark:via-pink-400 dark:to-purple-500 bg-clip-text text-transparent block mt-1 md:mt-2"
+              className="arcode-animated-text bg-gradient-to-r from-sky-400 via-yellow-400 to-pink-500 dark:from-sky-300 dark:via-yellow-300 dark:to-pink-400 bg-clip-text text-transparent block mt-1 md:mt-2"
             >
               {currentArcodeDisplayWord}
             </span>

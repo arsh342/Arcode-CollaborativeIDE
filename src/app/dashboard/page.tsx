@@ -52,12 +52,12 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onOpenProject, onMan
             alt={project.name}
             fill
             className="object-cover"
-            data-ai-hint={project.imageAiHint || "project image"}
+            data-ai-hint={project.imageAiHint || "gradient abstract"}
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           />
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <span
-              className="text-3xl font-extrabold bg-gradient-to-r from-sky-300 via-fuchsia-400 to-teal-300 bg-clip-text text-transparent p-2 text-center"
+              className="text-3xl font-extrabold bg-gradient-to-r from-sky-400 via-yellow-400 to-pink-500 dark:from-sky-300 dark:via-yellow-300 dark:to-pink-400 bg-clip-text text-transparent p-2 text-center"
               style={{ textShadow: '0px 2px 4px rgba(0, 0, 0, 0.7)' }}
             >
               {project.language}
@@ -522,7 +522,7 @@ export default function DashboardPage() {
         ownerId: user.uid,
         collaborators: { [user.uid]: 'owner' as 'owner' },
         memberUids: [user.uid],
-        imageAiHint: "coding abstract background"
+        imageAiHint: "gradient abstract"
       };
       await addDoc(collection(db, 'projects'), newProjectData);
       await fetchProjects(); 
@@ -599,7 +599,7 @@ export default function DashboardPage() {
       <aside className="w-60 bg-card text-card-foreground p-4 flex flex-col justify-between border-r shadow-sm">
         <div>
           <div className="mb-10 flex items-center justify-center px-2">
-             <span className="text-3xl font-extrabold bg-gradient-to-r from-orange-400 via-pink-500 to-purple-600 bg-clip-text text-transparent">
+             <span className="text-3xl font-extrabold bg-gradient-to-r from-sky-400 via-yellow-400 to-pink-500 dark:from-sky-300 dark:via-yellow-300 dark:to-pink-400 bg-clip-text text-transparent">
                Arcode
              </span>
           </div>
