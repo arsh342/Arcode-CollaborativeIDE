@@ -48,7 +48,7 @@ const features = [
   },
 ];
 
-const arcodeVariations = ["Arcode", "Arcøde", "Λrcode", "Ar코드", "Ar{code}"];
+const arcodeVariations = ["Arcode", "Arcøde", "Arcodé", "Λrcode", "Ar코드", "Ar{code}", "Ärcode", "Ārcōde", "Arコーデ", "อาโค้ด"]; // Added "อาโค้ด" (Thai-like)
 
 export default function HeroPage() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -70,7 +70,7 @@ export default function HeroPage() {
   useEffect(() => {
     const intervalId = setInterval(() => {
       setCurrentArcodeWordIndex((prevIndex) => (prevIndex + 1) % arcodeVariations.length);
-    }, 1500); // Changed animation speed to 1.5 seconds
+    }, 1500); 
 
     return () => clearInterval(intervalId);
   }, []);
@@ -78,7 +78,6 @@ export default function HeroPage() {
   const handleLearnMoreClick = (e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => {
     if (!isScrolled && featuresSectionRef.current) {
       setIsScrolled(true);
-      // Allow default behavior to scroll after ensuring section is visible
     }
   };
   
@@ -104,7 +103,7 @@ export default function HeroPage() {
                          dark:from-sky-300 dark:via-fuchsia-400 dark:to-teal-300
                          bg-clip-text text-transparent">
             Build, Collaborate, Innovate with <span 
-              key={currentArcodeDisplayWord} /* Key forces re-render for potential animation reset */
+              key={currentArcodeDisplayWord} 
               className="arcode-animated-text bg-gradient-to-r from-orange-400 via-pink-500 to-purple-600 dark:from-orange-300 dark:via-pink-400 dark:to-purple-500 bg-clip-text text-transparent block mt-1 md:mt-2"
             >
               {currentArcodeDisplayWord}
@@ -123,16 +122,14 @@ export default function HeroPage() {
           </div>
         </div>
       </section>
-
-      {/* Features Section */}
       
       <section 
         id="features" 
         ref={featuresSectionRef} 
         className={`py-16 md:py-24 bg-transparent relative z-10 transition-opacity duration-700 ease-out ${isScrolled ? 'opacity-100 animate-fadeInUp' : 'opacity-0'}`}
-        style={!isScrolled ? { visibility: 'hidden' } : {}} // Keep layout space but hide if not scrolled
+        style={!isScrolled ? { visibility: 'hidden' } : {}}
       >
-        {isScrolled && ( // Only render content if scrolled to trigger animation correctly
+        {isScrolled && ( 
           <>
             <div className="container mx-auto px-6">
               <div className="text-center mb-16">
