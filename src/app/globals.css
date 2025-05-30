@@ -42,7 +42,7 @@ body {
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
-    --radius: 0.375rem;
+    --radius: 0.5rem; /* Increased from 0.375rem */
 
     /* Sidebar colors (for shadcn/ui Sidebar, not VS Code panels) */
     --sidebar-background: 0 0% 11%;
