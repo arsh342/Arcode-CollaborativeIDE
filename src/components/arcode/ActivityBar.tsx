@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from 'react';
@@ -23,7 +24,26 @@ const activityBarItemsBottom = [
 ];
 
 const ActivityBar: React.FC = () => {
-  const { activeView, setActiveView } = useArcodeContext();
+  const { activeView, setActiveView, isRightPanelOpen, setRightPanelOpen } = useArcodeContext();
+
+  const handleItemClick = (viewId: ActiveView) => {
+    if (viewId === 'ai' || viewId === 'chat') {
+      if (activeView === viewId && isRightPanelOpen) {
+        setRightPanelOpen(false); // Toggle off if same view and panel is open
+      } else {
+        setActiveView(viewId);
+        setRightPanelOpen(true);
+      }
+    } else if (viewId === 'explorer' || viewId === 'settings') {
+      setActiveView(viewId);
+      setRightPanelOpen(false); // Close right panel if explorer or settings is selected
+    } else {
+        // For disabled items or future views that might not use right panel
+        setActiveView(viewId);
+        // Decide if right panel should be closed for other views too
+        // setRightPanelOpen(false); 
+    }
+  };
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -36,7 +56,7 @@ const ActivityBar: React.FC = () => {
                   variant={activeView === item.id ? 'secondary' : 'ghost'}
                   size="icon"
                   className={`w-10 h-10 ${activeView === item.id ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
-                  onClick={() => !item.disabled && setActiveView(item.id as ActiveView)}
+                  onClick={() => !item.disabled && handleItemClick(item.id as ActiveView)}
                   disabled={item.disabled}
                   aria-label={item.label}
                 >
@@ -57,7 +77,7 @@ const ActivityBar: React.FC = () => {
                    variant={activeView === item.id ? 'secondary' : 'ghost'}
                    size="icon"
                    className={`w-10 h-10 ${activeView === item.id ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
-                   onClick={() => !item.disabled && setActiveView(item.id as ActiveView)}
+                   onClick={() => !item.disabled && handleItemClick(item.id as ActiveView)}
                    disabled={item.disabled}
                    aria-label={item.label}
                 >
