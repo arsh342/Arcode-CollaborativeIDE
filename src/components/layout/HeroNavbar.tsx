@@ -1,3 +1,4 @@
+
 // src/components/layout/HeroNavbar.tsx
 "use client";
 
@@ -14,7 +15,8 @@ export default function HeroNavbar() {
 
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 50) {
+      // Adjusted scroll threshold slightly since navbar starts lower
+      if (window.scrollY > 20) { 
         setIsScrolled(true);
       } else {
         setIsScrolled(false);
@@ -22,8 +24,7 @@ export default function HeroNavbar() {
     };
 
     window.addEventListener('scroll', handleScroll);
-    // Call handler once on mount to set initial state based on current scroll position
-    handleScroll(); 
+    handleScroll(); // Call on mount to set initial state
 
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -31,15 +32,15 @@ export default function HeroNavbar() {
   return (
     <header 
       className={cn(
-        "sticky top-0 z-50 w-full transition-colors duration-300 ease-in-out",
+        "sticky top-[50px] z-50 w-full transition-colors duration-300 ease-in-out",
         isScrolled 
           ? "bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border"
           : "bg-transparent border-b border-transparent"
       )}
     >
-      <div className="container mx-auto flex h-14 items-center px-6">
+      <div className="container mx-auto flex h-16 items-center px-6">
         <Link href="/" className="flex items-center mr-6">
-          <span className="text-2xl font-bold bg-gradient-to-r from-sky-400 via-yellow-400 to-pink-500 dark:from-sky-300 dark:via-yellow-300 dark:to-pink-400 bg-clip-text text-transparent">
+          <span className="text-3xl font-bold bg-gradient-to-r from-sky-400 via-yellow-400 to-pink-500 dark:from-sky-300 dark:via-yellow-300 dark:to-pink-400 bg-clip-text text-transparent">
             Arcode
           </span>
         </Link>
@@ -48,20 +49,21 @@ export default function HeroNavbar() {
         </nav>
         <div className="flex flex-1 items-center justify-end space-x-2">
           {!loading && user ? (
-            <Button asChild>
+            <Button asChild className="text-base [&_svg]:size-5">
               <Link href="/dashboard">Go to Dashboard</Link>
             </Button>
           ) : !loading ? (
             <>
-              <Button asChild variant="ghost">
-                <Link href="/login"><LogIn className="mr-2 h-4 w-4"/>Sign In</Link>
+              <Button asChild variant="ghost" className="text-base [&_svg]:size-5">
+                <Link href="/login"><LogIn className="mr-2 h-5 w-5"/>Sign In</Link>
               </Button>
-              <Button asChild>
-                <Link href="/signup"><UserPlus className="mr-2 h-4 w-4"/>Sign Up</Link>
+              <Button asChild className="text-base [&_svg]:size-5">
+                <Link href="/signup"><UserPlus className="mr-2 h-5 w-5"/>Sign Up</Link>
               </Button>
             </>
           ) : (
-            <div className="h-9 w-24 bg-muted/30 rounded animate-pulse"></div> // Placeholder while loading
+            // Placeholder for loading state
+            <div className="h-10 w-28 bg-muted/30 rounded animate-pulse"></div>
           )}
         </div>
       </div>
