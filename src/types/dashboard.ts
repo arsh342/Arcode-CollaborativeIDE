@@ -8,4 +8,5 @@ export interface ProjectType {
   lastModified: Timestamp | FieldValue | string; // Firestore Timestamp on read/write, string for display
   userId: string; // To associate projects with users
   imageAiHint?: string;
+  language: string; // Added language field
 }

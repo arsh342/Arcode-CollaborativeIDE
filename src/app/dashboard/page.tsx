@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Briefcase, Settings, PlusCircle, FolderOpen, ExternalLink, Loader2, LogOut } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Briefcase, Settings, PlusCircle, FolderOpen, ExternalLink, Loader2, LogOut, Code2 } from 'lucide-react';
 import type { ProjectType } from '@/types/dashboard';
 import { useToast } from "@/hooks/use-toast";
 import { db } from '@/firebase/config';
@@ -28,11 +29,11 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onOpenProject }) => 
       return lastModified.toDate().toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' });
     }
     if (typeof lastModified === 'string') {
-      return lastModified; 
+      return lastModified;
     }
-    return 'Just now'; 
+    return 'Just now';
   };
-  
+
   return (
     <Card className="flex flex-col overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
       <CardHeader className="p-0">
@@ -51,6 +52,10 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onOpenProject }) => 
         <CardDescription className="text-sm text-muted-foreground mb-2 h-10 overflow-hidden text-ellipsis">
           {project.description}
         </CardDescription>
+        <div className="flex items-center text-xs text-muted-foreground mb-2">
+          <Code2 className="mr-1.5 h-3.5 w-3.5" />
+          <span>{project.language}</span>
+        </div>
         <p className="text-xs text-muted-foreground">Last modified: {getLastModifiedString(project.lastModified)}</p>
       </CardContent>
       <CardFooter className="p-4 border-t">
@@ -65,25 +70,29 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onOpenProject }) => 
 interface CreateProjectDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreateProject: (projectData: { name: string, description: string }) => Promise<void>;
+  onCreateProject: (projectData: { name: string, description: string, language: string }) => Promise<void>;
   isCreating: boolean;
 }
+
+const supportedLanguages = ["JavaScript", "Python", "TypeScript", "HTML", "CSS", "Java", "C#", "C++", "Ruby", "Go", "PHP", "Other"];
 
 const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({ open, onOpenChange, onCreateProject, isCreating }) => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [language, setLanguage] = useState('JavaScript'); // Default language
   const { toast } = useToast();
 
   const handleSubmit = async () => {
-    if (name.trim() && description.trim()) {
-      await onCreateProject({ name, description });
+    if (name.trim() && description.trim() && language) {
+      await onCreateProject({ name, description, language });
       setName('');
       setDescription('');
+      setLanguage('JavaScript'); // Reset to default
       onOpenChange(false);
     } else {
       toast({
         title: "Error",
-        description: "Project name and description cannot be empty.",
+        description: "Project name, description, and language are required.",
         variant: "destructive",
       });
     }
@@ -125,10 +134,25 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({ open, onOpenC
               disabled={isCreating}
             />
           </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="language" className="text-right">
+              Language
+            </Label>
+            <Select value={language} onValueChange={setLanguage} disabled={isCreating}>
+              <SelectTrigger className="col-span-3">
+                <SelectValue placeholder="Select a language" />
+              </SelectTrigger>
+              <SelectContent>
+                {supportedLanguages.map(lang => (
+                  <SelectItem key={lang} value={lang}>{lang}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isCreating}>Cancel</Button>
-          <Button type="submit" onClick={handleSubmit} disabled={!name.trim() || !description.trim() || isCreating}>
+          <Button type="submit" onClick={handleSubmit} disabled={!name.trim() || !description.trim() || !language || isCreating}>
             {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {isCreating ? "Creating..." : "Create Project"}
           </Button>
@@ -146,14 +170,13 @@ export default function DashboardPage() {
   const [isCreating, setIsCreating] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
-  const { user, loading: authLoading, logout } = useAuth(); // Use useAuth
+  const { user, loading: authLoading, logout } = useAuth();
 
   const fetchProjects = useCallback(async () => {
-    if (!user) return; // Don't fetch if no user
+    if (!user) return;
     setIsLoading(true);
     try {
       const projectsCollection = collection(db, 'projects');
-      // Query projects only for the current user
       const q = query(projectsCollection, where("userId", "==", user.uid) ,orderBy('lastModified', 'desc'));
       const querySnapshot = await getDocs(q);
       const fetchedProjects: ProjectType[] = [];
@@ -165,7 +188,7 @@ export default function DashboardPage() {
       console.error("Error fetching projects: ", error);
       toast({
         title: "Error Fetching Projects",
-        description: "Could not load projects from the database.",
+        description: "Could not load projects from the database. Check console for index creation link if needed.",
         variant: "destructive",
       });
     } finally {
@@ -177,11 +200,11 @@ export default function DashboardPage() {
     if (!authLoading && user) {
       fetchProjects();
     } else if (!authLoading && !user) {
-      router.push('/login'); // Redirect if not logged in and not loading
+      router.push('/login');
     }
   }, [authLoading, user, fetchProjects, router]);
 
-  const handleCreateProject = async (projectData: { name: string, description: string }) => {
+  const handleCreateProject = async (projectData: { name: string, description: string, language: string }) => {
     if (!user) {
         toast({ title: "Not Authenticated", description: "You must be logged in to create a project.", variant: "destructive"});
         return;
@@ -191,13 +214,15 @@ export default function DashboardPage() {
       const newProjectData = {
         name: projectData.name,
         description: projectData.description,
+        language: projectData.language, // Save selected language
         imageUrl: `https://placehold.co/600x400.png`,
         lastModified: serverTimestamp(),
-        userId: user.uid, // Store userId with the project
+        userId: user.uid,
         imageAiHint: projectData.name.toLowerCase().split(' ').slice(0, 2).join(' ') || 'project concept'
       };
-      const docRef = await addDoc(collection(db, 'projects'), newProjectData);
-      await fetchProjects(); 
+      // const docRef = // Removed docRef as it's not used.
+      await addDoc(collection(db, 'projects'), newProjectData);
+      await fetchProjects();
       toast({
         title: "Project Created",
         description: `${projectData.name} has been successfully created.`,
@@ -226,8 +251,7 @@ export default function DashboardPage() {
     await logout();
     toast({title: "Logged Out", description: "You have been successfully logged out."});
   };
-  
-  // If auth is loading, or if not loading and no user (which AuthProvider should redirect), show loader.
+
   if (authLoading || (!authLoading && !user)) {
     return (
       <div className="flex items-center justify-center h-screen bg-background">
@@ -282,8 +306,9 @@ export default function DashboardPage() {
                   <CardContent className="p-4">
                     <div className="h-6 bg-muted rounded w-3/4 mb-2 animate-pulse"></div>
                     <div className="h-4 bg-muted rounded w-full mb-1 animate-pulse"></div>
-                    <div className="h-4 bg-muted rounded w-5/6 mb-3 animate-pulse"></div>
-                    <div className="h-3 bg-muted rounded w-1/2 animate-pulse"></div>
+                    <div className="h-4 bg-muted rounded w-5/6 mb-1 animate-pulse"></div>
+                    <div className="h-3 bg-muted rounded w-1/3 mb-3 animate-pulse"></div> {/* Language placeholder */}
+                    <div className="h-3 bg-muted rounded w-1/2 animate-pulse"></div> {/* Last modified placeholder */}
                   </CardContent>
                   <CardFooter className="p-4 border-t">
                     <div className="h-9 bg-muted rounded w-full animate-pulse"></div>
@@ -309,9 +334,9 @@ export default function DashboardPage() {
           )}
         </div>
       </main>
-      <CreateProjectDialog 
-        open={isCreateDialogOpen} 
-        onOpenChange={setIsCreateDialogOpen} 
+      <CreateProjectDialog
+        open={isCreateDialogOpen}
+        onOpenChange={setIsCreateDialogOpen}
         onCreateProject={handleCreateProject}
         isCreating={isCreating}
       />
