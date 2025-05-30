@@ -1,3 +1,4 @@
+
 // src/app/dashboard/page.tsx
 "use client";
 
@@ -11,19 +12,21 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Briefcase, Settings, PlusCircle, FolderOpen, ExternalLink, Loader2, LogOut, Code2 } from 'lucide-react';
+import { Briefcase, Settings, PlusCircle, FolderOpen, ExternalLink, Loader2, LogOut, Code2, Users } from 'lucide-react'; // Added Users icon
 import type { ProjectType } from '@/types/dashboard';
 import { useToast } from "@/hooks/use-toast";
 import { db } from '@/firebase/config';
 import { collection, addDoc, getDocs, query, orderBy, serverTimestamp, Timestamp, where } from 'firebase/firestore';
-import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ProjectCardProps {
   project: ProjectType;
   onOpenProject: (projectId: string) => void;
+  currentUserId: string | null;
 }
 
-const ProjectCard: React.FC<ProjectCardProps> = ({ project, onOpenProject }) => {
+const ProjectCard: React.FC<ProjectCardProps> = ({ project, onOpenProject, currentUserId }) => {
+  const { toast } = useToast();
   const getLastModifiedString = (lastModified: ProjectType['lastModified']): string => {
     if (lastModified instanceof Timestamp) {
       return lastModified.toDate().toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' });
@@ -33,6 +36,15 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onOpenProject }) => 
     }
     return 'Just now';
   };
+
+  const handleManageCollaborators = () => {
+    toast({
+      title: "Coming Soon!",
+      description: "Collaborator management and invitation system is under development.",
+    });
+  };
+
+  const isOwner = currentUserId === project.ownerId;
 
   return (
     <Card className="flex flex-col overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
@@ -58,10 +70,15 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onOpenProject }) => 
         </div>
         <p className="text-xs text-muted-foreground">Last modified: {getLastModifiedString(project.lastModified)}</p>
       </CardContent>
-      <CardFooter className="p-4 border-t">
-        <Button onClick={() => onOpenProject(project.id)} className="w-full" variant="outline">
+      <CardFooter className="p-4 border-t flex items-center gap-2">
+        <Button onClick={() => onOpenProject(project.id)} className="flex-1" variant="outline">
           <ExternalLink className="mr-2 h-4 w-4" /> Open Project
         </Button>
+        {isOwner && (
+          <Button onClick={handleManageCollaborators} className="flex-1" variant="secondary">
+            <Users className="mr-2 h-4 w-4" /> Manage
+          </Button>
+        )}
       </CardFooter>
     </Card>
   );
@@ -79,7 +96,7 @@ const supportedLanguages = ["JavaScript", "Python", "TypeScript", "HTML", "CSS",
 const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({ open, onOpenChange, onCreateProject, isCreating }) => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [language, setLanguage] = useState('JavaScript'); // Default language
+  const [language, setLanguage] = useState('JavaScript');
   const { toast } = useToast();
 
   const handleSubmit = async () => {
@@ -87,7 +104,7 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({ open, onOpenC
       await onCreateProject({ name, description, language });
       setName('');
       setDescription('');
-      setLanguage('JavaScript'); // Reset to default
+      setLanguage('JavaScript');
       onOpenChange(false);
     } else {
       toast({
@@ -177,18 +194,19 @@ export default function DashboardPage() {
     setIsLoading(true);
     try {
       const projectsCollection = collection(db, 'projects');
-      const q = query(projectsCollection, where("userId", "==", user.uid) ,orderBy('lastModified', 'desc'));
+      // Query projects where the current user is the owner
+      const q = query(projectsCollection, where("ownerId", "==", user.uid) ,orderBy('lastModified', 'desc'));
       const querySnapshot = await getDocs(q);
       const fetchedProjects: ProjectType[] = [];
       querySnapshot.forEach((doc) => {
         fetchedProjects.push({ id: doc.id, ...doc.data() } as ProjectType);
       });
       setProjects(fetchedProjects);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching projects: ", error);
       toast({
         title: "Error Fetching Projects",
-        description: "Could not load projects from the database. Check console for index creation link if needed.",
+        description: error.message || "Could not load projects. If this persists, check Firestore indexes.",
         variant: "destructive",
       });
     } finally {
@@ -214,15 +232,15 @@ export default function DashboardPage() {
       const newProjectData = {
         name: projectData.name,
         description: projectData.description,
-        language: projectData.language, // Save selected language
+        language: projectData.language,
         imageUrl: `https://placehold.co/600x400.png`,
         lastModified: serverTimestamp(),
-        userId: user.uid,
+        ownerId: user.uid, // Set the ownerId
+        collaborators: { [user.uid]: 'owner' }, // Initialize collaborators with the owner
         imageAiHint: projectData.name.toLowerCase().split(' ').slice(0, 2).join(' ') || 'project concept'
       };
-      // const docRef = // Removed docRef as it's not used.
       await addDoc(collection(db, 'projects'), newProjectData);
-      await fetchProjects();
+      await fetchProjects(); // Refetch projects to include the new one
       toast({
         title: "Project Created",
         description: `${projectData.name} has been successfully created.`,
@@ -307,8 +325,8 @@ export default function DashboardPage() {
                     <div className="h-6 bg-muted rounded w-3/4 mb-2 animate-pulse"></div>
                     <div className="h-4 bg-muted rounded w-full mb-1 animate-pulse"></div>
                     <div className="h-4 bg-muted rounded w-5/6 mb-1 animate-pulse"></div>
-                    <div className="h-3 bg-muted rounded w-1/3 mb-3 animate-pulse"></div> {/* Language placeholder */}
-                    <div className="h-3 bg-muted rounded w-1/2 animate-pulse"></div> {/* Last modified placeholder */}
+                    <div className="h-3 bg-muted rounded w-1/3 mb-3 animate-pulse"></div>
+                    <div className="h-3 bg-muted rounded w-1/2 animate-pulse"></div>
                   </CardContent>
                   <CardFooter className="p-4 border-t">
                     <div className="h-9 bg-muted rounded w-full animate-pulse"></div>
@@ -328,7 +346,12 @@ export default function DashboardPage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
               {projects.map((project) => (
-                <ProjectCard key={project.id} project={project} onOpenProject={handleOpenProject} />
+                <ProjectCard 
+                  key={project.id} 
+                  project={project} 
+                  onOpenProject={handleOpenProject}
+                  currentUserId={user?.uid || null}
+                />
               ))}
             </div>
           )}
@@ -343,3 +366,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
