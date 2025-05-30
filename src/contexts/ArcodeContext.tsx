@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { ArcodeFile, ArcodeFileSystemEntity, ActiveView, ActivePanel } from '@/types/arcode';
@@ -51,10 +52,8 @@ export const ArcodeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   };
   
   const getFileById = useCallback((fileId: string): ArcodeFile | undefined => {
-    // First, check openFiles cache
     const openFile = openFiles.find(f => f.id === fileId);
     if (openFile) return openFile;
-    // If not in openFiles, search fileSystem
     return findFileRecursive(fileSystem, fileId);
   }, [openFiles, fileSystem]);
 
@@ -62,29 +61,37 @@ export const ArcodeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const openFile = useCallback((fileId: string) => {
     const fileToOpen = getFileById(fileId);
     if (fileToOpen && fileToOpen.type === 'file') {
-      if (!openFiles.find(f => f.id === fileId)) {
-        setOpenFiles(prev => [...prev, fileToOpen]);
-      }
-      setActiveFileIdState(fileId);
+      setOpenFiles(prevOpenFiles => {
+        if (!prevOpenFiles.find(f => f.id === fileId)) {
+          return [...prevOpenFiles, fileToOpen];
+        }
+        return prevOpenFiles; // File already open, no change to openFiles array
+      });
+      setActiveFileIdState(fileId); // Always set active, even if already open
     }
-  }, [getFileById, openFiles]);
+  }, [getFileById]);
 
   const closeFile = useCallback((fileId: string) => {
-    setOpenFiles(prev => prev.filter(f => f.id !== fileId));
-    if (activeFileId === fileId) {
-      setActiveFileIdState(openFiles.length > 1 ? openFiles.filter(f => f.id !== fileId)[0]?.id || null : null);
-    }
-  }, [activeFileId, openFiles]);
+    setOpenFiles(prevOpenFiles => {
+      const updatedOpenFiles = prevOpenFiles.filter(f => f.id !== fileId);
+      if (activeFileId === fileId) {
+        // If the closed file was active, set the new active file
+        // to the first one in the updated list, or null if no files are open.
+        setActiveFileIdState(updatedOpenFiles[0]?.id || null);
+      }
+      return updatedOpenFiles;
+    });
+  }, [activeFileId]); // activeFileId is needed for deciding new active file
 
   const setActiveFileId = useCallback((fileId: string | null) => {
     setActiveFileIdState(fileId);
   }, []);
 
   const updateFileContent = useCallback((fileId: string, newContent: string) => {
-    setOpenFiles(prev => prev.map(f => f.id === fileId ? { ...f, content: newContent } : f));
+    setOpenFiles(prevOpenFiles =>
+      prevOpenFiles.map(f => (f.id === fileId ? { ...f, content: newContent } : f))
+    );
     
-    // Also update in the main fileSystem state if you want changes to persist across closing/reopening
-    // This is a simplified update; a more robust solution would update nested structures.
     const updateInFileSystemRecursive = (entities: ArcodeFileSystemEntity[]): ArcodeFileSystemEntity[] => {
       return entities.map(entity => {
         if (entity.id === fileId && entity.type === 'file') {
@@ -96,20 +103,20 @@ export const ArcodeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         return entity;
       });
     };
-    setFileSystem(prev => updateInFileSystemRecursive(prev));
-
-  }, []);
+    setFileSystem(prevFileSystem => updateInFileSystemRecursive(prevFileSystem));
+  }, []); // No dependencies from closure are read, so empty array is correct.
 
   const togglePanel = () => setPanelOpen(prev => !prev);
   
   useEffect(() => {
-    // Open README.md by default
-    const readme = initialFiles.find(f => f.name === 'README.md') as ArcodeFile;
+    const readme = initialFiles.find(
+        (f): f is ArcodeFile => f.type === 'file' && f.name === 'README.md'
+    );
     if (readme) {
       openFile(readme.id);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run only once on mount
+  }, []); // Run only once on mount. `openFile` is now robust to multiple calls.
 
   return (
     <ArcodeContext.Provider value={{
