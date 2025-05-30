@@ -8,19 +8,19 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'; // Removed AlertDialogTrigger as it's not used directly here.
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Briefcase, Settings, PlusCircle, FolderOpen, ExternalLink, Loader2, LogOut, Code2, Users, Trash2 } from 'lucide-react';
+import { Briefcase, Settings, PlusCircle, FolderOpen, ExternalLink, Loader2, LogOut, Code2, Users, Trash2, Copy, Check, MailIcon } from 'lucide-react';
 import type { ProjectType } from '@/types/dashboard';
 import { useToast } from "@/hooks/use-toast";
 import { db } from '@/firebase/config';
 import { collection, addDoc, getDocs, query, orderBy, serverTimestamp, Timestamp, where, doc, updateDoc, arrayUnion, arrayRemove, type FieldValue, deleteDoc } from 'firebase/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { cva } from 'class-variance-authority'; // For AlertDialog delete button
+import { cva } from 'class-variance-authority';
 
 interface ProjectCardProps {
   project: ProjectType;
@@ -193,6 +193,14 @@ const ManageCollaboratorsDialog: React.FC<ManageCollaboratorsDialogProps> = ({ p
   const { toast } = useToast();
   const [newCollaboratorUid, setNewCollaboratorUid] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
+  const [projectUrl, setProjectUrl] = useState('');
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (project && typeof window !== "undefined") {
+      setProjectUrl(`${window.location.origin}/ide/${project.id}`);
+    }
+  }, [project, isOpen]); // Re-calculate if project or isOpen changes
 
   if (!project || !user) return null;
 
@@ -256,13 +264,39 @@ const ManageCollaboratorsDialog: React.FC<ManageCollaboratorsDialogProps> = ({ p
       setIsUpdating(false);
     }
   };
+
+  const handleCopyLink = async () => {
+    if (!projectUrl) return;
+    try {
+      await navigator.clipboard.writeText(projectUrl);
+      setCopied(true);
+      toast({ title: "Link Copied!", description: "Project link copied to clipboard." });
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      toast({ title: "Copy Failed", description: "Could not copy link to clipboard.", variant: "destructive" });
+      console.error('Failed to copy: ', err);
+    }
+  };
+
+  const handleMailLink = () => {
+    if (!projectUrl) return;
+    const subject = encodeURIComponent(`Invitation to collaborate on Arcode project: ${project.name}`);
+    const body = encodeURIComponent(`Hi,\n\nYou've been invited to collaborate on the Arcode project "${project.name}".\n\nYou can access it here:\n${projectUrl}\n\nBest regards,\n${user.displayName || 'An Arcode User'}`);
+    window.location.href = `mailto:?subject=${subject}&body=${body}`;
+  };
+
+  const handleShareOnWhatsApp = () => {
+    if (!projectUrl) return;
+    const text = encodeURIComponent(`Check out this Arcode project "${project.name}": ${projectUrl}`);
+    window.open(`https://wa.me/?text=${text}`, '_blank');
+  };
   
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Manage Collaborators for {project.name}</DialogTitle>
-          <DialogDescription>Add or remove collaborators for this project.</DialogDescription>
+          <DialogDescription>Add or remove collaborators, and share the project.</DialogDescription>
         </DialogHeader>
         <div className="py-4 space-y-6">
           <div>
@@ -319,6 +353,32 @@ const ManageCollaboratorsDialog: React.FC<ManageCollaboratorsDialogProps> = ({ p
               </p>
             </div>
           )}
+
+          <div>
+            <h4 className="font-medium mb-2 text-sm">Share Project</h4>
+            <div className="space-y-3">
+              <div>
+                <Label htmlFor="project-link-manage" className="text-xs">Project Link</Label>
+                <div className="flex items-center space-x-2 mt-1">
+                  <Input id="project-link-manage" value={projectUrl} readOnly className="flex-1 h-9 text-xs" />
+                  <Button type="button" size="icon" variant="outline" onClick={handleCopyLink} aria-label="Copy link" className="h-9 w-9">
+                    {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+              <div className="flex space-x-2">
+                <Button type="button" onClick={handleMailLink} variant="outline" size="sm" className="flex-1">
+                  <MailIcon className="mr-2 h-4 w-4" /> Mail Link
+                </Button>
+                <Button type="button" onClick={handleShareOnWhatsApp} variant="outline" size="sm" className="flex-1">
+                  {/* Using text as Lucide doesn't have a WhatsApp icon */}
+                  <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.35 3.43 16.84L2.05 22L7.31 20.62C8.76 21.41 10.37 21.82 12.04 21.82C17.5 21.82 21.95 17.37 21.95 11.91C21.95 9.27 20.92 6.83 19.17 4.97C17.42 3.11 14.83 2 12.04 2M12.04 3.67C14.21 3.67 16.22 4.5 17.72 5.94C19.22 7.38 20.28 9.48 20.28 11.91C20.28 16.46 16.65 20.14 12.04 20.14C10.53 20.14 9.09 19.75 7.85 19L7.55 18.83L4.43 19.65L5.29 16.63L5.1 16.32C4.18 14.93 3.79 13.32 3.79 11.91C3.79 7.36 7.42 3.67 12.04 3.67M17.02 14.62C16.87 14.77 16.33 15.09 16.04 15.17C15.76 15.24 15.39 15.31 15.04 15.17C14.69 15.02 14.05 14.71 13.31 14.01C12.44 13.2 11.85 12.23 11.7 12.08C11.56 11.94 11.42 11.78 11.27 11.6C11.12 11.41 11.05 11.27 10.88 11.03C10.79 10.91 10.64 10.8 10.46 10.68C10.27 10.56 10.09 10.48 9.92 10.48C9.75 10.48 9.59 10.41 9.45 10.56C9.31 10.71 8.85 11.17 8.71 11.32C8.56 11.47 8.42 11.54 8.27 11.54C8.12 11.54 7.98 11.47 7.84 11.32C7.69 11.17 7.15 10.62 7 10.47C6.55 9.86 6.24 9.27 6.24 8.63C6.24 7.98 6.38 7.67 6.53 7.52C6.68 7.37 6.89 7.22 7.1 7.22C7.17 7.22 7.24 7.22 7.31 7.22C7.45 7.22 7.53 7.22 7.62 7.41C7.72 7.59 7.86 7.91 7.93 8C8.01 8.1 8.08 8.24 8.15 8.24C8.23 8.24 8.3 8.17 8.37 8.1C8.44 8.02 8.48 7.88 8.55 7.73C8.63 7.59 8.7 7.45 8.77 7.3C8.85 7.16 8.92 7.05 8.99 6.93C9.06 6.81 9.11 6.74 9.11 6.63C9.11 6.52 9.04 6.37 8.97 6.3C8.9 6.23 8.78 6.16 8.63 6.09C8.48 6.01 8.34 5.98 8.22 5.98C8.1 5.98 7.87 6.05 7.62 6.27C7.38 6.49 7.08 6.74 6.87 6.93C6.41 7.32 6.05 7.81 6.05 8.63C6.05 9.74 6.64 10.74 6.78 10.89C6.93 11.04 7.52 11.67 8.12 11.94C8.71 12.21 9.17 12.32 9.45 12.32C9.69 12.32 9.91 12.28 10.09 12.21C10.27 12.13 10.84 11.81 11.03 11.57C11.23 11.32 11.27 11.08 11.34 10.97C11.42 10.86 11.53 10.75 11.67 10.64C11.81 10.53 11.92 10.48 12.03 10.48C12.15 10.48 12.26 10.52 12.37 10.64C12.48 10.75 12.87 11.17 13.02 11.32C13.17 11.47 13.24 11.54 13.35 11.54C13.47 11.54 13.78 11.43 14.03 11.29C14.28 11.14 15.19 10.56 15.34 10.41C15.49 10.26 15.49 10.08 15.41 9.93C15.34 9.79 15.06 9.68 14.81 9.58C14.57 9.48 14.32 9.45 14.11 9.45C13.89 9.45 13.71 9.48 13.53 9.55C13.35 9.62 13.21 9.76 13.14 9.9C13.06 10.05 12.82 10.41 12.54 10.75C12.26 11.09 11.99 11.16 11.81 11.16C11.64 11.16 11.36 11.02 11.12 10.56C10.88 10.1 10.34 9.16 10.23 8.95C10.13 8.74 9.92 8.56 9.64 8.56C9.36 8.56 9.11 8.77 9.01 9.09C8.9 9.41 8.66 10.13 8.66 10.24C8.66 10.35 8.66 10.46 8.73 10.53C8.8 10.6 8.91 10.64 8.98 10.64C9.05 10.64 9.23 10.56 9.37 10.41C9.52 10.26 9.66 10.01 9.8 9.83C9.95 9.64 10.16 9.43 10.37 9.43C10.59 9.43 10.83 9.64 10.9 9.75C10.97 9.86 11.01 10.05 11.01 10.19C11.01 10.34 11.01 10.48 10.97 10.59C10.94 10.71 10.87 10.85 10.8 10.96C10.73 11.07 10.62 11.21 10.48 11.36C10.34 11.51 10.09 11.72 9.81 11.83C9.53 11.94 9.22 12.01 8.94 12.01C8.66 12.01 8.21 11.9 7.58 11.57C6.94 11.24 6.23 10.56 6.12 10.41C5.94 10.13 5.4 9.27 5.4 8.63C5.4 7.71 5.94 7.04 6.16 6.82C6.38 6.6 6.75 6.32 7.24 6.18C7.73 6.04 8.12 5.98 8.22 5.98C8.5 5.98 8.92 6.08 9.24 6.43C9.55 6.78 9.77 7.24 9.77 7.38C9.77 7.52 9.73 7.63 9.73 7.7C9.73 7.77 9.69 7.88 9.62 7.95C9.55 8.02 9.48 8.06 9.41 8.06C9.34 8.06 9.27 8.02 9.16 7.88C9.06 7.73 8.75 7.19 8.68 7.08C8.61 6.97 8.54 6.87 8.36 6.87C8.19 6.87 8.05 6.94 7.94 7.05C7.84 7.16 7.77 7.33 7.77 7.48C7.77 7.63 7.84 7.8 7.94 7.91C8.05 8.02 8.19 8.09 8.29 8.09C8.44 8.09 8.62 8.02 8.76 7.77C8.9 7.52 9.15 6.98 9.15 6.98C9.33 6.54 9.79 6.11 10.34 6.11C10.79 6.11 11.15 6.32 11.33 6.6C11.51 6.88 11.65 7.34 11.65 7.84C11.65 8.73 11.15 9.55 10.94 9.83C10.73 10.1 10.62 10.21 10.62 10.35C10.62 10.49 10.69 10.6 10.8 10.67C10.9 10.75 11.01 10.82 11.08 10.85C11.15 10.89 11.22 10.92 11.29 10.92C11.54 10.92 11.76 10.82 11.97 10.45C12.18 10.08 12.5 9.45 12.71 9.14C12.92 8.83 13.26 8.73 13.47 8.73C13.72 8.73 14.11 8.83 14.32 9.05C14.54 9.27 14.64 9.55 14.68 9.65C14.72 9.76 14.72 9.93 14.68 10.04C14.64 10.14 14.57 10.25 14.5 10.32C14.43 10.39 14.32 10.46 14.21 10.53C14.11 10.6 13.93 10.68 13.79 10.75C13.64 10.82 13.33 10.96 13.09 11.14C12.84 11.32 12.44 11.6 12.44 11.98C12.44 12.35 12.8 12.72 13.02 12.91C13.24 13.1 13.72 13.42 14.47 13.63C15.21 13.84 15.79 13.91 16.07 13.91C16.36 13.91 16.87 13.81 17.02 14.62"></path></svg>
+                  Share on WhatsApp
+                </Button>
+              </div>
+            </div>
+          </div>
+
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isUpdating}>Close</Button>
@@ -336,7 +396,6 @@ interface DeleteProjectDialogProps {
   projectName: string | undefined;
 }
 
-// Helper to get buttonVariants for AlertDialogAction
 const buttonVariants = cva(
   "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
   {
@@ -408,6 +467,7 @@ export default function DashboardPage() {
     setIsLoading(true);
     try {
       const projectsCollection = collection(db, 'projects');
+      // Query for projects where the current user's UID is in the memberUids array
       const q = query(projectsCollection, where("memberUids", "array-contains", user.uid), orderBy('lastModified', 'desc'));
       const querySnapshot = await getDocs(q);
       const fetchedProjects: ProjectType[] = [];
@@ -417,11 +477,22 @@ export default function DashboardPage() {
       setProjects(fetchedProjects);
     } catch (error: any) {
       console.error("Error fetching projects: ", error);
-      toast({
-        title: "Error Fetching Projects",
-        description: error.message || "Could not load projects. If this persists, check Firestore indexes.",
-        variant: "destructive",
-      });
+      // Check if error message contains "firestore/indexes" and provide specific guidance
+      const specificError = "firestore/indexes";
+      if (error.message && typeof error.message === 'string' && error.message.toLowerCase().includes(specificError)) {
+        toast({
+            title: "Firestore Index Required",
+            description: "A Firestore index is needed for this query. Please check the browser console for a link to create it, or create it manually for 'projects' collection with 'memberUids' (array-contains) and 'lastModified' (descending).",
+            variant: "destructive",
+            duration: 9000, // Longer duration for this important message
+        });
+      } else {
+        toast({
+            title: "Error Fetching Projects",
+            description: error.message || "Could not load projects.",
+            variant: "destructive",
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -443,15 +514,13 @@ export default function DashboardPage() {
     setIsCreating(true);
     try {
       const newProjectData = {
-        name: projectData.name,
-        description: projectData.description,
-        language: projectData.language,
-        imageUrl: `https://placehold.co/600x400.png`, // Reverted to placehold.co
+        ...projectData, // Includes name, description, language from form
+        imageUrl: `https://placehold.co/600x400.png`, 
         lastModified: serverTimestamp() as FieldValue,
         ownerId: user.uid,
         collaborators: { [user.uid]: 'owner' as 'owner' },
-        memberUids: [user.uid],
-        imageAiHint: "technology software" // Generic hint for placeholder
+        memberUids: [user.uid], // Initialize with owner's UID
+        imageAiHint: "gradient abstract"
       };
       await addDoc(collection(db, 'projects'), newProjectData);
       await fetchProjects(); 
@@ -486,13 +555,13 @@ export default function DashboardPage() {
 
   const handleManageProject = (project: ProjectType) => {
     setSelectedProjectForManagement(project);
-    setProjectToDelete(null); // Ensure delete dialog state is reset
+    setProjectToDelete(null); 
     setIsDeleteDialogOpen(false);
     setIsManageCollaboratorsDialogOpen(true);
   };
 
   const handleInitiateDeleteProject = (project: ProjectType) => {
-    setSelectedProjectForManagement(null); // Ensure manage dialog state is reset
+    setSelectedProjectForManagement(null); 
     setProjectToDelete(project);
     setIsManageCollaboratorsDialogOpen(false);
     setIsDeleteDialogOpen(true);
@@ -631,5 +700,6 @@ export default function DashboardPage() {
     </div>
   );
 }
+
 
     
