@@ -4,7 +4,7 @@
 import React from 'react';
 import { useArcodeContext } from '@/hooks/useArcodeContext';
 import MonacoEditorWrapper from './MonacoEditorWrapper';
-import EditorHeader from './EditorHeader'; // Import the new header
+// EditorHeader import removed
 import { Button } from '@/components/ui/button';
 import { XIcon } from 'lucide-react';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
@@ -12,10 +12,10 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 const EditorArea: React.FC = () => {
   const { openFiles, activeFileId, setActiveFileId, closeFile, getFileById } = useArcodeContext();
 
-  if (openFiles.length === 0 && !activeFileId) { // Ensure activeFileId check for initial load
+  if (openFiles.length === 0 && !activeFileId) {
     return (
       <div className="h-full flex flex-col bg-background">
-        <EditorHeader /> 
+        {/* EditorHeader removed from here */}
         <div className="flex-grow flex items-center justify-center text-muted-foreground">
             <p>Open a file to start editing or select one from the explorer.</p>
         </div>
@@ -25,12 +25,10 @@ const EditorArea: React.FC = () => {
   
   const activeFile = activeFileId ? getFileById(activeFileId) : null;
 
-  // Fallback if activeFileId is set but file somehow not found (e.g. after closing last file)
-  // or if openFiles is empty but activeFileId still lingers (should be rare with closeFile logic)
   if (!activeFile && openFiles.length === 0) {
      return (
       <div className="h-full flex flex-col bg-background">
-        <EditorHeader />
+        {/* EditorHeader removed from here */}
         <div className="flex-grow flex items-center justify-center text-muted-foreground">
             <p>No files open. Select a file from the explorer.</p>
         </div>
@@ -38,12 +36,11 @@ const EditorArea: React.FC = () => {
     );
   }
 
-
   return (
     <div className="h-full flex flex-col bg-background">
-      <EditorHeader /> {/* Add the header here */}
+      {/* EditorHeader removed from here */}
       
-      {openFiles.length > 0 && ( // Only show tabs if there are open files
+      {openFiles.length > 0 && (
         <ScrollArea className="w-full whitespace-nowrap border-b shrink-0">
           <div className="flex items-center h-10 px-1 bg-muted/30">
             {openFiles.map(file => (
@@ -75,7 +72,7 @@ const EditorArea: React.FC = () => {
         </ScrollArea>
       )}
       
-      <div className="flex-grow relative min-h-0"> {/* Added min-h-0 for flex-grow to work correctly */}
+      <div className="flex-grow relative min-h-0">
         {activeFile ? (
           <MonacoEditorWrapper
             fileId={activeFile.id}
