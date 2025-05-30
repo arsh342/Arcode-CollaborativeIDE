@@ -4,6 +4,7 @@
 import type { ArcodeFile, ArcodeFileSystemEntity, ActiveView, ActivePanel, ArcodeFolder, TerminalSession } from '@/types/arcode';
 import { initialFiles } from '@/types/arcode';
 import React, { createContext, useState, useCallback, ReactNode, useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 interface ArcodeContextType {
   activeView: ActiveView;
@@ -42,6 +43,9 @@ interface ArcodeContextType {
   createFolderInExplorer: () => void;
   importFilesFromComputer: (fileList: FileList | null) => void;
   importFolderFromComputerFlat: (fileList: FileList | null) => void;
+
+  renameFileSystemEntity: (entityId: string, newName: string) => void;
+  deleteFileSystemEntity: (entityId: string) => void;
 }
 
 const ArcodeContext = createContext<ArcodeContextType | undefined>(undefined);
@@ -85,6 +89,7 @@ export const ArcodeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   const [terminalSessions, setTerminalSessions] = useState<TerminalSession[]>([]);
   const [activeTerminalId, setActiveTerminalIdState] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const findFileRecursive = (entities: ArcodeFileSystemEntity[], fileId: string): ArcodeFile | undefined => {
     for (const entity of entities) {
@@ -107,23 +112,24 @@ export const ArcodeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
 
   const openFile = useCallback((fileId: string) => {
-    const fileToOpen = getFileById(fileId); 
+    const fileToOpen = findFileRecursive(fileSystem, fileId); // Search in the main fileSystem
     if (fileToOpen && fileToOpen.type === 'file') {
       setOpenFiles(prevOpenFiles => {
         if (!prevOpenFiles.some(f => f.id === fileId)) {
-          return [...prevOpenFiles, fileToOpen];
+          return [...prevOpenFiles, { ...fileToOpen }]; // Add a copy to openFiles
         }
-        return prevOpenFiles; 
+        return prevOpenFiles;
       });
-      setActiveFileIdState(fileId); 
+      setActiveFileIdState(fileId);
     }
-  }, [getFileById]);
+  }, [fileSystem]);
+
 
   const closeFile = useCallback((fileId: string) => {
     setOpenFiles(prevOpenFiles => {
       const updatedOpenFiles = prevOpenFiles.filter(f => f.id !== fileId);
       if (activeFileId === fileId) {
-        setActiveFileIdState(updatedOpenFiles[0]?.id || null);
+        setActiveFileIdState(updatedOpenFiles.length > 0 ? updatedOpenFiles[0]?.id || null : null);
       }
       return updatedOpenFiles;
     });
@@ -156,7 +162,6 @@ export const ArcodeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const newSessionId = `term-${newId()}`;
     let newSessionName = `Terminal 1`;
     let counter = 1;
-    // Ensure unique name
     while(terminalSessions.some(s => s.name === newSessionName)) {
         counter++;
         newSessionName = `Terminal ${counter}`;
@@ -177,23 +182,20 @@ export const ArcodeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       createTerminalSession();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Create initial terminal session on mount
+  }, []); 
 
 
   const closeTerminalSession = useCallback((sessionId: string) => {
     setTerminalSessions(prevSessions => {
       const sessionToCloseIndex = prevSessions.findIndex(s => s.id === sessionId);
       if (sessionToCloseIndex === -1) return prevSessions;
-
       const updatedSessions = prevSessions.filter(s => s.id !== sessionId);
-      
       if (activeTerminalId === sessionId) {
         if (updatedSessions.length > 0) {
-          // Try to activate the session before the closed one, or the first one
           const newActiveIndex = Math.max(0, sessionToCloseIndex -1);
           setActiveTerminalIdState(updatedSessions[newActiveIndex]?.id || updatedSessions[0]?.id || null);
         } else {
-          setActiveTerminalIdState(null); // No sessions left
+          setActiveTerminalIdState(null); 
         }
       }
       return updatedSessions;
@@ -241,19 +243,19 @@ export const ArcodeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
 
   useEffect(() => {
-    const readme = initialFiles.find(
+    const readme = fileSystem.find(
         (f): f is ArcodeFile => f.type === 'file' && f.name === 'README.md'
     );
-    if (readme && openFiles.length === 0 && fileSystem.some(f => f.id === readme.id)) { 
+    if (readme && openFiles.length === 0 ) { 
       openFile(readme.id);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fileSystem]);
+  }, [fileSystem]); // Removed openFiles from dependency array as per original to avoid re-triggering
 
   const addEntityToRoot = (entity: ArcodeFileSystemEntity) => {
     setFileSystem(prevFileSystem => {
-      if (prevFileSystem.some(e => e.name === entity.name && e.path === entity.path)) {
-        alert(`An item named "${entity.name}" already exists at the root. Please choose a different name or location.`);
+      if (prevFileSystem.some(e => e.name === entity.name && e.path.substring(0, e.path.lastIndexOf('/')) === entity.path.substring(0, entity.path.lastIndexOf('/')))) {
+        toast({ title: "Creation Error", description: `An item named "${entity.name}" already exists at the root.`, variant: "destructive" });
         return prevFileSystem;
       }
       return [...prevFileSystem, entity];
@@ -273,7 +275,7 @@ export const ArcodeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       };
       addEntityToRoot(newFile);
     }
-  }, []);
+  }, [toast]);
 
   const createFolderInExplorer = useCallback(() => {
     const folderName = window.prompt("Enter new folder name:");
@@ -287,7 +289,7 @@ export const ArcodeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       };
       addEntityToRoot(newFolder);
     }
-  }, []);
+  }, [toast]);
 
   const importFilesFromComputer = useCallback(async (fileList: FileList | null) => {
     if (!fileList) return;
@@ -311,11 +313,12 @@ export const ArcodeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
                 updatedFileSystem.push(nf);
             } else {
                  console.warn(`File named "${nf.name}" already exists at the root. Skipping duplicate.`);
+                 toast({title: "Import Warning", description: `File "${nf.name}" already exists and was skipped.`, variant: "default"});
             }
         });
         return updatedFileSystem;
     });
-  }, []);
+  }, [toast]);
 
   const importFolderFromComputerFlat = useCallback(async (fileList: FileList | null) => {
     if (!fileList) return;
@@ -350,11 +353,137 @@ export const ArcodeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
                 updatedFileSystem.push(nf);
             } else {
                  console.warn(`File named "${nf.name}" already exists at the root. Skipping duplicate.`);
+                 toast({title: "Import Warning", description: `File "${nf.name}" from folder already exists and was skipped.`, variant: "default"});
             }
         });
         return updatedFileSystem;
     });
-  }, []);
+  }, [toast]);
+
+  // Helper to find an entity and its parent (if any)
+  const findEntityAndParentRecursive = (
+    entities: ArcodeFileSystemEntity[], 
+    entityId: string, 
+    parent: ArcodeFolder | null = null
+  ): { entity: ArcodeFileSystemEntity; parent: ArcodeFolder | null } | null => {
+    for (const entity of entities) {
+      if (entity.id === entityId) {
+        return { entity, parent };
+      }
+      if (entity.type === 'folder' && entity.children) {
+        const found = findEntityAndParentRecursive(entity.children, entityId, entity);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+  
+  const renameFileSystemEntity = useCallback((entityId: string, newName: string) => {
+    const result = findEntityAndParentRecursive(fileSystem, entityId);
+    if (!result) {
+      toast({ title: "Rename Error", description: "Item not found.", variant: "destructive" });
+      return;
+    }
+    const { entity: targetEntity, parent } = result;
+
+    // Check for name collision in the same directory
+    const siblings = parent ? parent.children || [] : fileSystem;
+    if (siblings.some(s => s.name === newName && s.id !== entityId)) {
+      toast({ title: "Rename Error", description: `An item named "${newName}" already exists in this folder.`, variant: "destructive" });
+      return;
+    }
+
+    setFileSystem(prevFileSystem => {
+      const updatePathsRecursive = (children: ArcodeFileSystemEntity[], oldPathPrefix: string, newPathPrefix: string): ArcodeFileSystemEntity[] => {
+        return children.map(child => {
+          const relativePath = child.path.substring(oldPathPrefix.length);
+          const childNewPath = newPathPrefix + relativePath;
+          return {
+            ...child,
+            path: childNewPath,
+            children: child.type === 'folder' && child.children ? updatePathsRecursive(child.children, child.path, childNewPath) : child.children,
+          };
+        });
+      };
+
+      const renameRecursive = (items: ArcodeFileSystemEntity[], targetId: string, newNameStr: string): ArcodeFileSystemEntity[] => {
+        return items.map(item => {
+          if (item.id === targetId) {
+            const oldItemPath = item.path;
+            const parentPath = oldItemPath.substring(0, oldItemPath.lastIndexOf('/'));
+            const newItemPath = parentPath ? `${parentPath}/${newNameStr}` : `/${newNameStr}`;
+            
+            let updatedItem = { ...item, name: newNameStr, path: newItemPath };
+
+            if (updatedItem.type === 'folder' && updatedItem.children) {
+              updatedItem.children = updatePathsRecursive(updatedItem.children, oldItemPath, newItemPath);
+            }
+            
+            setOpenFiles(prevOpen => prevOpen.map(of => {
+              if (of.id === targetId) {
+                return { ...of, name: newNameStr, path: newItemPath };
+              }
+              if (item.type === 'folder' && of.path.startsWith(oldItemPath + '/')) {
+                const relativePath = of.path.substring(oldItemPath.length);
+                return {...of, path: newItemPath + relativePath};
+              }
+              return of;
+            }));
+            
+            toast({title: "Renamed", description: `"${item.name}" to "${newNameStr}"`});
+            return updatedItem;
+          }
+          if (item.type === 'folder' && item.children) {
+            return { ...item, children: renameRecursive(item.children, targetId, newNameStr) };
+          }
+          return item;
+        });
+      };
+      return renameRecursive(prevFileSystem, entityId, newName);
+    });
+  }, [fileSystem, toast, setOpenFiles]);
+
+  const deleteFileSystemEntity = useCallback((entityId: string) => {
+    const entityToDeleteInfo = findEntityAndParentRecursive(fileSystem, entityId);
+    if (!entityToDeleteInfo) {
+        toast({ title: "Delete Error", description: "Item not found.", variant: "destructive" });
+        return;
+    }
+    const entityToDelete = entityToDeleteInfo.entity;
+
+    const confirmDelete = window.confirm(`Are you sure you want to delete "${entityToDelete.name}"? This action cannot be undone.`);
+    if (!confirmDelete) return;
+
+    let filesToClose: string[] = [];
+    if (entityToDelete.type === 'file') {
+        filesToClose.push(entityToDelete.id);
+    } else if (entityToDelete.type === 'folder' && entityToDelete.children) {
+        const collectDescendantFiles = (folder: ArcodeFolder) => {
+            folder.children?.forEach(child => {
+                if (child.type === 'file') filesToClose.push(child.id);
+                else if (child.type === 'folder') collectDescendantFiles(child);
+            });
+        };
+        collectDescendantFiles(entityToDelete);
+    }
+    
+    filesToClose.forEach(fileId => closeFile(fileId)); // This handles activeFileId logic
+
+    setFileSystem(prevFileSystem => {
+      const deleteRecursive = (items: ArcodeFileSystemEntity[], targetId: string): ArcodeFileSystemEntity[] => {
+        const filteredItems = items.filter(item => item.id !== targetId);
+        return filteredItems.map(item => {
+          if (item.type === 'folder' && item.children) {
+            return { ...item, children: deleteRecursive(item.children, targetId) };
+          }
+          return item;
+        });
+      };
+      return deleteRecursive(prevFileSystem, entityId);
+    });
+
+    toast({title: "Deleted", description: `"${entityToDelete.name}" has been deleted.`});
+  }, [fileSystem, closeFile, toast]);
 
 
   return (
@@ -366,7 +495,8 @@ export const ArcodeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       activePanel, setActivePanel, isPanelOpen, togglePanel, setPanelOpen,
       isRightPanelOpen, setRightPanelOpen,
       terminalSessions, activeTerminalId, createTerminalSession, closeTerminalSession, setActiveTerminalId, addOutputToTerminalSession, clearTerminalSessionOutput,
-      createFileInExplorer, createFolderInExplorer, importFilesFromComputer, importFolderFromComputerFlat
+      createFileInExplorer, createFolderInExplorer, importFilesFromComputer, importFolderFromComputerFlat,
+      renameFileSystemEntity, deleteFileSystemEntity
     }}>
       {children}
     </ArcodeContext.Provider>
@@ -374,3 +504,6 @@ export const ArcodeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 };
 
 export default ArcodeContext;
+
+
+    
