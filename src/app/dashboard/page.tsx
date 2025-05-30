@@ -55,8 +55,13 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onOpenProject, onMan
             className="object-cover"
             data-ai-hint={project.imageAiHint || "project image"}
           />
-          <div className="absolute bottom-2 left-2 bg-black/70 text-white px-2.5 py-1 rounded-md text-xs font-semibold shadow-md">
-            {project.language}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <span
+              className="text-3xl font-extrabold bg-gradient-to-r from-sky-300 via-fuchsia-400 to-teal-300 bg-clip-text text-transparent p-2 text-center"
+              style={{ textShadow: '0px 2px 4px rgba(0, 0, 0, 0.7)' }}
+            >
+              {project.language}
+            </span>
           </div>
         </div>
       </CardHeader>
@@ -65,7 +70,6 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onOpenProject, onMan
         <CardDescription className="text-sm text-muted-foreground mb-2 h-10 overflow-hidden text-ellipsis">
           {project.description}
         </CardDescription>
-        {/* Language display removed from here, now overlaid on image */}
         <p className="text-xs text-muted-foreground">Last modified: {getLastModifiedString(project.lastModified)}</p>
       </CardContent>
       <CardFooter className="p-4 border-t flex items-center gap-2">
@@ -703,3 +707,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
