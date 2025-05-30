@@ -40,19 +40,18 @@ const ChatPanel: React.FC = () => {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  // Placeholder for collaborators - in a real app, this would come from a backend/DB
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
 
   useEffect(() => {
     if (user) {
-      // Mock collaborators: current user + a couple of others
-      const mockCollaborators: Collaborator[] = [
-        { id: user.uid, name: user.displayName || user.email?.split('@')[0] || 'You', avatarUrl: user.photoURL || undefined, isOnline: true },
-        { id: 'collab2', name: 'Jane Doe', avatarUrl: 'https://placehold.co/40x40.png?text=JD', isOnline: false },
-        { id: 'collab3', name: 'Bob Smith', avatarUrl: 'https://placehold.co/40x40.png?text=BS', isOnline: true },
-      ];
-      // Filter out the current user if they are already in the mock list from a different source
-      setCollaborators(mockCollaborators.filter((c, index, self) => index === self.findIndex((t) => t.id === c.id || (t.id === user.uid && c.id === user.uid ))));
+      // Only show the current authenticated user
+      const currentUserAsCollaborator: Collaborator = {
+        id: user.uid,
+        name: user.displayName || user.email?.split('@')[0] || 'You',
+        avatarUrl: user.photoURL || undefined,
+        isOnline: true, // Assume current user is online
+      };
+      setCollaborators([currentUserAsCollaborator]);
     } else {
       setCollaborators([]);
     }
@@ -125,6 +124,20 @@ const ChatPanel: React.FC = () => {
     }
     return '';
   };
+  
+  const getSenderAvatar = (messageUserId: string, messageUserName?: string): string | undefined => {
+     // For messages from others, try to find them in the collaborators list (if it were populated from DB)
+     // For now, this will mostly be for the current user or fall back.
+    const collaborator = collaborators.find(c => c.id === messageUserId);
+    return collaborator?.avatarUrl;
+  };
+  
+  const getSenderName = (messageUserId: string, messageUserName?: string): string => {
+    if (messageUserId === user?.uid) return user.displayName || user.email?.split('@')[0] || 'You';
+    const collaborator = collaborators.find(c => c.id === messageUserId);
+    return collaborator?.name || messageUserName || 'User';
+  }
+
 
   return (
     <Card className="h-full flex flex-col border-0 shadow-none rounded-none">
@@ -132,7 +145,6 @@ const ChatPanel: React.FC = () => {
         <CardTitle className="text-xs font-medium uppercase tracking-wider">Project Chat</CardTitle>
       </CardHeader>
       <CardContent className="flex-grow p-0 flex flex-col overflow-hidden">
-        {/* Collaborators Section - Placeholder */}
         <div className="px-3 py-2 border-b">
           <h4 className="text-xs font-semibold mb-1.5 text-muted-foreground">Collaborators</h4>
           <div className="flex items-center space-x-2 overflow-x-auto pb-1">
@@ -147,11 +159,14 @@ const ChatPanel: React.FC = () => {
                     <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-card" />
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground truncate w-full">{collab.name === (user?.displayName || user?.email?.split('@')[0]) ? 'You' : collab.name.split(' ')[0]}</p>
+                <p className="text-xs text-muted-foreground truncate w-full">{collab.id === user?.uid ? 'You' : collab.name.split(' ')[0]}</p>
               </div>
             ))}
+             {collaborators.length === 0 && !user && (
+                <p className="text-xs text-muted-foreground">Login to see collaborators.</p>
+            )}
             {collaborators.length === 0 && user && (
-                 <div key={user.uid} className="flex flex-col items-center text-center w-14" title={user.displayName || user.email?.split('@')[0]}>
+                 <div key={user.uid} className="flex flex-col items-center text-center w-14" title={user.displayName || user.email?.split('@')[0] || 'You'}>
                     <div className="relative">
                         <Avatar className="h-8 w-8 mb-0.5" data-ai-hint="person avatar">
                             {user.photoURL ? <AvatarImage src={user.photoURL} alt={user.displayName || 'Your avatar'} /> : null }
@@ -180,18 +195,18 @@ const ChatPanel: React.FC = () => {
             <div key={msg.id} className={`flex gap-2 ${msg.userId === user?.uid ? 'justify-end' : ''}`}>
               {msg.userId !== user?.uid && (
                 <Avatar className="h-8 w-8" data-ai-hint="person avatar">
-                   <AvatarImage src={collaborators.find(c => c.id === msg.userId)?.avatarUrl || `https://placehold.co/40x40.png?text=${(msg.userName || 'U').charAt(0).toUpperCase()}`} alt={msg.userName || 'User'} />
-                  <AvatarFallback>{msg.userName ? msg.userName.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
+                   <AvatarImage src={getSenderAvatar(msg.userId, msg.userName) || `https://placehold.co/40x40.png?text=${(msg.userName || 'U').charAt(0).toUpperCase()}`} alt={getSenderName(msg.userId, msg.userName)} />
+                  <AvatarFallback>{getSenderName(msg.userId, msg.userName).charAt(0).toUpperCase()}</AvatarFallback>
                 </Avatar>
               )}
               <div className={`max-w-[70%] p-2 rounded-lg shadow-sm ${msg.userId === user?.uid ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                {msg.userId !== user?.uid && <p className="text-xs font-semibold mb-0.5">{msg.userName || 'User'}</p>}
+                {msg.userId !== user?.uid && <p className="text-xs font-semibold mb-0.5">{getSenderName(msg.userId, msg.userName)}</p>}
                 <p className="text-sm whitespace-pre-wrap break-words">{msg.text}</p>
                 <p className={`text-xs mt-1 ${msg.userId === user?.uid ? 'text-primary-foreground/70' : 'text-muted-foreground/70'} ${msg.userId === user?.uid ? 'text-right' : 'text-left'}`}>
                   {formatTimestamp(msg.timestamp)}
                 </p>
               </div>
-               {msg.userId === user?.uid && (
+               {msg.userId === user?.uid && user && (
                 <Avatar className="h-8 w-8" data-ai-hint="person avatar">
                   {user.photoURL ? <AvatarImage src={user.photoURL} alt="Your avatar"/> : null}
                   <AvatarFallback><UserCircle size={20}/></AvatarFallback>
@@ -221,5 +236,3 @@ const ChatPanel: React.FC = () => {
 };
 
 export default ChatPanel;
-
-    
