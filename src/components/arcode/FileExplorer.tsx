@@ -101,7 +101,7 @@ const FileSystemItem: React.FC<FileSystemItemProps> = ({ item, level = 0 }) => {
           <DropdownMenuContent 
             sideOffset={5} 
             align="start" 
-            onClick={(e) => e.stopPropagation()} // Allows clicks within dropdown without affecting item selection
+            onClick={(e) => e.stopPropagation()} 
           >
             <DropdownMenuItem onSelect={handleRename}>
               <Edit3 className="mr-2 h-3.5 w-3.5" />
@@ -118,7 +118,7 @@ const FileSystemItem: React.FC<FileSystemItemProps> = ({ item, level = 0 }) => {
         </DropdownMenu>
       </div>
       {item.type === 'folder' && isOpen && item.children && item.children.length > 0 && (
-         <div className="ml-0 w-full"> {/* Ensure children take full width for proper background on hover */}
+         <div className="ml-0 w-full"> 
           {item.children.map(child => (
             <FileSystemItem key={child.id} item={child} level={level + 1} />
           ))}
