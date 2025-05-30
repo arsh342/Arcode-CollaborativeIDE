@@ -48,7 +48,7 @@ const features = [
   },
 ];
 
-const arcodeVariations = ["Arcode", "Arcøde", "Arcodé", "Λrcode", "Ar코드", "Ar{code}", "Ärcode", "Ārcōde", "Arコーデ", "อาโค้ด", "ਅਰਕੋਡ", "आरकोड", "代码弧", "Аркод", "Arkodez", "Արկոդ", "არკოდი", "Αρκόντ", "ארקוד"];
+const arcodeVariations = ["Arcode", "Arcøde", "Arcodé", "Λrcode", "Ar코드", "Ar{code}", "Ärcode", "Ārcōde", "Arコーデ", "อาโค้ด", "代码弧", "Аркод", "Arkodez", "Արկոդ", "არკოდი", "Αρκόντ", "ארקוד"];
 
 
 export default function HeroPage() {
