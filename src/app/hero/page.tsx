@@ -48,7 +48,8 @@ const features = [
   },
 ];
 
-const arcodeVariations = ["Arcode", "Arcøde", "Arcodé", "Λrcode", "Ar코드", "Ar{code}", "Ärcode", "Ārcōde", "Arコーデ", "อาโค้ด", "ਅਰਕੋਡ", "आरकोड", "代码弧", "Аркод", "Arkodez"];
+const arcodeVariations = ["Arcode", "Arcøde", "Arcodé", "Λrcode", "Ar코드", "Ar{code}", "Ärcode", "Ārcōde", "Arコーデ", "อาโค้ด", "ਅਰਕੋਡ", "आरकोड", "代码弧", "Аркод", "Arkodez", "Արկոդ", "არკოდი", "Αρκόντ", "ארקוד"];
+
 
 export default function HeroPage() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -77,9 +78,8 @@ export default function HeroPage() {
 
   const handleLearnMoreClick = (e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => {
     if (!isScrolled && featuresSectionRef.current) {
-      setIsScrolled(true); // Ensure section is visible before trying to scroll to it
+      setIsScrolled(true); 
     }
-    // Allow default anchor link behavior to proceed
   };
   
   const currentArcodeDisplayWord = arcodeVariations[currentArcodeWordIndex];
@@ -88,7 +88,6 @@ export default function HeroPage() {
     <div 
       className="flex flex-col min-h-screen bg-background relative"
       style={{
-        // Using a dark base with a subtle radial glow from top-center
         backgroundImage: `radial-gradient(ellipse at top center, hsl(270, 8%, 20%) 0%, hsl(var(--background)) 60%)`,
         backgroundRepeat: 'no-repeat',
         backgroundAttachment: 'fixed', 
@@ -106,7 +105,7 @@ export default function HeroPage() {
                          bg-clip-text text-transparent">
             Build, Collaborate, Innovate with <span 
               key={currentArcodeDisplayWord} 
-              className="arcode-animated-text bg-gradient-to-r from-sky-400 via-yellow-400 to-pink-500 dark:from-sky-300 dark:via-yellow-300 dark:to-pink-400 bg-clip-text text-transparent block mt-1 md:mt-2"
+              className="arcode-animated-text bg-gradient-to-r from-sky-400 via-yellow-400 to-pink-500 dark:from-sky-300 dark:via-yellow-300 dark:to-pink-400 bg-clip-text text-transparent block mt-1 md:mt-2 text-5xl md:text-7xl"
             >
               {currentArcodeDisplayWord}
             </span>
@@ -185,3 +184,4 @@ export default function HeroPage() {
     </div>
   );
 }
+
