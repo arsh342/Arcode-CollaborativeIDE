@@ -8,7 +8,9 @@ export interface ProjectType {
   imageUrl: string;
   lastModified: Timestamp | FieldValue | string; // Firestore Timestamp on read/write, string for display
   ownerId: string; // UID of the user who created/owns the project
-  collaborators?: Record<string, 'owner' | 'developer'>; // Map of user UIDs to their roles
+  collaborators: Record<string, 'owner' | 'developer'>; // Map of user UIDs to their roles
+  memberUids: string[]; // Array of UIDs of all members (owner + developers)
   imageAiHint?: string;
-  language: string; 
+  language: string;
 }
+

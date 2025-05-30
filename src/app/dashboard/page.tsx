@@ -12,21 +12,22 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Briefcase, Settings, PlusCircle, FolderOpen, ExternalLink, Loader2, LogOut, Code2, Users } from 'lucide-react'; // Added Users icon
+import { Briefcase, Settings, PlusCircle, FolderOpen, ExternalLink, Loader2, LogOut, Code2, Users, Trash2, UserPlus } from 'lucide-react';
 import type { ProjectType } from '@/types/dashboard';
 import { useToast } from "@/hooks/use-toast";
 import { db } from '@/firebase/config';
-import { collection, addDoc, getDocs, query, orderBy, serverTimestamp, Timestamp, where } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, orderBy, serverTimestamp, Timestamp, where, doc, updateDoc, arrayUnion, arrayRemove, FieldValue } from 'firebase/firestore';
 import { useAuth } from '@/contexts/AuthContext';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface ProjectCardProps {
   project: ProjectType;
   onOpenProject: (projectId: string) => void;
+  onManageProject: (project: ProjectType) => void;
   currentUserId: string | null;
 }
 
-const ProjectCard: React.FC<ProjectCardProps> = ({ project, onOpenProject, currentUserId }) => {
-  const { toast } = useToast();
+const ProjectCard: React.FC<ProjectCardProps> = ({ project, onOpenProject, onManageProject, currentUserId }) => {
   const getLastModifiedString = (lastModified: ProjectType['lastModified']): string => {
     if (lastModified instanceof Timestamp) {
       return lastModified.toDate().toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' });
@@ -35,13 +36,6 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onOpenProject, curre
       return lastModified;
     }
     return 'Just now';
-  };
-
-  const handleManageCollaborators = () => {
-    toast({
-      title: "Coming Soon!",
-      description: "Collaborator management and invitation system is under development.",
-    });
   };
 
   const isOwner = currentUserId === project.ownerId;
@@ -75,7 +69,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onOpenProject, curre
           <ExternalLink className="mr-2 h-4 w-4" /> Open Project
         </Button>
         {isOwner && (
-          <Button onClick={handleManageCollaborators} className="flex-1" variant="secondary">
+          <Button onClick={() => onManageProject(project)} className="flex-1" variant="secondary">
             <Users className="mr-2 h-4 w-4" /> Manage
           </Button>
         )}
@@ -179,6 +173,155 @@ const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({ open, onOpenC
   );
 };
 
+interface ManageCollaboratorsDialogProps {
+  project: ProjectType | null;
+  isOpen: boolean;
+  onOpenChange: (isOpen: boolean) => void;
+  onCollaboratorsUpdate: () => void; // Callback to refresh project list
+}
+
+const ManageCollaboratorsDialog: React.FC<ManageCollaboratorsDialogProps> = ({ project, isOpen, onOpenChange, onCollaboratorsUpdate }) => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [newCollaboratorUid, setNewCollaboratorUid] = useState('');
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  if (!project || !user) return null;
+
+  const handleRemoveCollaborator = async (collaboratorUid: string) => {
+    if (collaboratorUid === project.ownerId) {
+      toast({ title: "Error", description: "Cannot remove the project owner.", variant: "destructive" });
+      return;
+    }
+    setIsUpdating(true);
+    try {
+      const projectRef = doc(db, 'projects', project.id);
+      const currentCollaborators = { ...project.collaborators };
+      delete currentCollaborators[collaboratorUid];
+
+      await updateDoc(projectRef, {
+        collaborators: currentCollaborators,
+        memberUids: arrayRemove(collaboratorUid)
+      });
+      toast({ title: "Collaborator Removed", description: `User ${collaboratorUid.substring(0,6)}... removed.` });
+      onCollaboratorsUpdate(); // Refresh dashboard
+    } catch (error: any) {
+      console.error("Error removing collaborator:", error);
+      toast({ title: "Error", description: error.message || "Could not remove collaborator.", variant: "destructive" });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleAddCollaborator = async () => {
+    if (!newCollaboratorUid.trim()) {
+      toast({ title: "Error", description: "Please enter a User ID.", variant: "destructive" });
+      return;
+    }
+    if (newCollaboratorUid.trim() === user.uid) {
+      toast({ title: "Error", description: "You cannot add yourself as a collaborator.", variant: "destructive" });
+      return;
+    }
+    if (project.collaborators[newCollaboratorUid.trim()]) {
+      toast({ title: "Already a Collaborator", description: `User ${newCollaboratorUid.substring(0,6)}... is already part of this project.`, variant: "default" });
+      setNewCollaboratorUid('');
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      const projectRef = doc(db, 'projects', project.id);
+      const collaboratorId = newCollaboratorUid.trim();
+      
+      // For now, we assume the UID is valid. A real system would verify user existence.
+      // And ensure the user is not already a collaborator.
+      await updateDoc(projectRef, {
+        [`collaborators.${collaboratorId}`]: 'developer' as 'developer', // Explicitly type as 'developer'
+        memberUids: arrayUnion(collaboratorId)
+      });
+      
+      toast({ title: "Collaborator Added", description: `User ${collaboratorId.substring(0,6)}... added as a developer.` });
+      setNewCollaboratorUid('');
+      onCollaboratorsUpdate(); // Refresh dashboard
+    } catch (error: any) {
+      console.error("Error adding collaborator:", error);
+      toast({ title: "Error", description: error.message || "Could not add collaborator.", variant: "destructive" });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+  
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Manage Collaborators for {project.name}</DialogTitle>
+          <DialogDescription>Add or remove collaborators for this project.</DialogDescription>
+        </DialogHeader>
+        <div className="py-4 space-y-6">
+          <div>
+            <h4 className="font-medium mb-2 text-sm">Current Collaborators</h4>
+            {Object.keys(project.collaborators).length > 0 ? (
+              <ScrollArea className="h-40 border rounded-md p-2">
+                <ul className="space-y-1">
+                  {Object.entries(project.collaborators).map(([uid, role]) => (
+                    <li key={uid} className="flex justify-between items-center text-xs p-1.5 rounded hover:bg-muted/50">
+                      <div>
+                        <span className="font-medium block truncate max-w-[200px]">{uid === user.uid ? `${uid.substring(0,10)}... (You)` : `${uid.substring(0,10)}...`}</span>
+                        <span className="text-muted-foreground capitalize">{role}</span>
+                      </div>
+                      {role === 'developer' && project.ownerId === user.uid && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive hover:bg-destructive/10"
+                          onClick={() => handleRemoveCollaborator(uid)}
+                          disabled={isUpdating}
+                          aria-label="Remove collaborator"
+                        >
+                          <Trash2 size={14} />
+                        </Button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </ScrollArea>
+            ) : (
+              <p className="text-xs text-muted-foreground">No collaborators yet (besides you, the owner).</p>
+            )}
+          </div>
+
+          {project.ownerId === user.uid && (
+            <div>
+              <h4 className="font-medium mb-2 text-sm">Add Collaborator by User ID</h4>
+              <div className="flex items-center space-x-2">
+                <Input
+                  id="collaborator-uid"
+                  placeholder="Enter User ID to invite as developer"
+                  value={newCollaboratorUid}
+                  onChange={(e) => setNewCollaboratorUid(e.target.value)}
+                  className="text-sm"
+                  disabled={isUpdating}
+                />
+                <Button onClick={handleAddCollaborator} disabled={isUpdating || !newCollaboratorUid.trim()} size="sm">
+                  {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Add
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Note: This adds users directly. A full email invitation system is coming soon.
+              </p>
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isUpdating}>Close</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 
 export default function DashboardPage() {
   const [projects, setProjects] = useState<ProjectType[]>([]);
@@ -189,13 +332,17 @@ export default function DashboardPage() {
   const { toast } = useToast();
   const { user, loading: authLoading, logout } = useAuth();
 
+  const [selectedProjectForManagement, setSelectedProjectForManagement] = useState<ProjectType | null>(null);
+  const [isManageCollaboratorsDialogOpen, setIsManageCollaboratorsDialogOpen] = useState(false);
+
+
   const fetchProjects = useCallback(async () => {
     if (!user) return;
     setIsLoading(true);
     try {
       const projectsCollection = collection(db, 'projects');
-      // Query projects where the current user is the owner
-      const q = query(projectsCollection, where("ownerId", "==", user.uid) ,orderBy('lastModified', 'desc'));
+      // Query projects where the current user is in the memberUids array
+      const q = query(projectsCollection, where("memberUids", "array-contains", user.uid), orderBy('lastModified', 'desc'));
       const querySnapshot = await getDocs(q);
       const fetchedProjects: ProjectType[] = [];
       querySnapshot.forEach((doc) => {
@@ -234,13 +381,14 @@ export default function DashboardPage() {
         description: projectData.description,
         language: projectData.language,
         imageUrl: `https://placehold.co/600x400.png`,
-        lastModified: serverTimestamp(),
-        ownerId: user.uid, // Set the ownerId
-        collaborators: { [user.uid]: 'owner' }, // Initialize collaborators with the owner
+        lastModified: serverTimestamp() as FieldValue,
+        ownerId: user.uid,
+        collaborators: { [user.uid]: 'owner' as 'owner' }, // Explicitly type 'owner'
+        memberUids: [user.uid],
         imageAiHint: projectData.name.toLowerCase().split(' ').slice(0, 2).join(' ') || 'project concept'
       };
       await addDoc(collection(db, 'projects'), newProjectData);
-      await fetchProjects(); // Refetch projects to include the new one
+      await fetchProjects(); 
       toast({
         title: "Project Created",
         description: `${projectData.name} has been successfully created.`,
@@ -268,6 +416,11 @@ export default function DashboardPage() {
   const handleLogout = async () => {
     await logout();
     toast({title: "Logged Out", description: "You have been successfully logged out."});
+  };
+
+  const handleManageProject = (project: ProjectType) => {
+    setSelectedProjectForManagement(project);
+    setIsManageCollaboratorsDialogOpen(true);
   };
 
   if (authLoading || (!authLoading && !user)) {
@@ -346,10 +499,11 @@ export default function DashboardPage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
               {projects.map((project) => (
-                <ProjectCard 
-                  key={project.id} 
-                  project={project} 
+                <ProjectCard
+                  key={project.id}
+                  project={project}
                   onOpenProject={handleOpenProject}
+                  onManageProject={handleManageProject}
                   currentUserId={user?.uid || null}
                 />
               ))}
@@ -363,6 +517,17 @@ export default function DashboardPage() {
         onCreateProject={handleCreateProject}
         isCreating={isCreating}
       />
+      {selectedProjectForManagement && (
+        <ManageCollaboratorsDialog
+          project={selectedProjectForManagement}
+          isOpen={isManageCollaboratorsDialogOpen}
+          onOpenChange={(isOpen) => {
+            setIsManageCollaboratorsDialogOpen(isOpen);
+            if (!isOpen) setSelectedProjectForManagement(null); // Clear selected project when dialog closes
+          }}
+          onCollaboratorsUpdate={fetchProjects}
+        />
+      )}
     </div>
   );
 }
