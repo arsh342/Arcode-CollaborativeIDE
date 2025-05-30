@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'; // Removed AlertDialogTrigger as it's not used directly here.
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -17,15 +17,16 @@ import { Briefcase, Settings, PlusCircle, FolderOpen, ExternalLink, Loader2, Log
 import type { ProjectType } from '@/types/dashboard';
 import { useToast } from "@/hooks/use-toast";
 import { db } from '@/firebase/config';
-import { collection, addDoc, getDocs, query, orderBy, serverTimestamp, Timestamp, where, doc, updateDoc, arrayUnion, arrayRemove, FieldValue, deleteDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, orderBy, serverTimestamp, Timestamp, where, doc, updateDoc, arrayUnion, arrayRemove, type FieldValue, deleteDoc } from 'firebase/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { cva } from 'class-variance-authority'; // For AlertDialog delete button
 
 interface ProjectCardProps {
   project: ProjectType;
   onOpenProject: (projectId: string) => void;
   onManageProject: (project: ProjectType) => void;
-  onInitiateDelete: (project: ProjectType) => void; // New prop
+  onInitiateDelete: (project: ProjectType) => void;
   currentUserId: string | null;
 }
 
@@ -335,6 +336,31 @@ interface DeleteProjectDialogProps {
   projectName: string | undefined;
 }
 
+// Helper to get buttonVariants for AlertDialogAction
+const buttonVariants = cva(
+  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+  {
+    variants: {
+      variant: {
+        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+        outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        ghost: "hover:bg-accent hover:text-accent-foreground",
+        link: "text-primary underline-offset-4 hover:underline",
+      },
+      size: {
+        default: "h-10 px-4 py-2",
+        sm: "h-9 rounded-md px-3",
+        lg: "h-11 rounded-md px-8",
+        icon: "h-10 w-10",
+       },
+    },
+    defaultVariants: { variant: "default", size: "default" },
+  }
+);
+
+
 const DeleteProjectDialog: React.FC<DeleteProjectDialogProps> = ({ isOpen, onOpenChange, onConfirm, isDeleting, projectName }) => {
   return (
     <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
@@ -420,12 +446,12 @@ export default function DashboardPage() {
         name: projectData.name,
         description: projectData.description,
         language: projectData.language,
-        imageUrl: `https://source.unsplash.com/random/600x400/?gradient,abstract`, // Updated image source
+        imageUrl: `https://placehold.co/600x400.png`, // Reverted to placehold.co
         lastModified: serverTimestamp() as FieldValue,
         ownerId: user.uid,
         collaborators: { [user.uid]: 'owner' as 'owner' },
         memberUids: [user.uid],
-        imageAiHint: "gradient abstract" // Updated hint
+        imageAiHint: "technology software" // Generic hint for placeholder
       };
       await addDoc(collection(db, 'projects'), newProjectData);
       await fetchProjects(); 
@@ -503,7 +529,7 @@ export default function DashboardPage() {
         <div>
           <div className="mb-10 flex items-center space-x-2 px-2">
             <Briefcase className="h-7 w-7 text-primary" />
-            <h2 className="text-xl font-bold text-foreground">Projects OS</h2>
+            <h2 className="text-xl font-bold text-foreground">Arcode</h2>
           </div>
           <nav className="space-y-1">
             <Button variant="secondary" className="w-full justify-start text-sm">
@@ -606,22 +632,4 @@ export default function DashboardPage() {
   );
 }
 
-// Helper to get buttonVariants for AlertDialogAction (if not directly available)
-import { cva } from 'class-variance-authority';
-const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
-  {
-    variants: {
-      variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-        outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
-      },
-      size: { /* ... */ },
-    },
-    defaultVariants: { variant: "default" },
-  }
-);
+    
