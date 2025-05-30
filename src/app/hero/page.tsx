@@ -75,16 +75,7 @@ export default function HeroPage() {
               <Link href="#features">Learn More</Link>
             </Button>
           </div>
-          <div className="mt-16 relative aspect-video max-w-4xl mx-auto rounded-xl shadow-2xl overflow-hidden border border-border">
-            <Image 
-                src="https://placehold.co/1200x675.png" 
-                alt="Arcode IDE Screenshot" 
-                layout="fill" 
-                objectFit="cover"
-                data-ai-hint="modern IDE screenshot"
-                priority
-            />
-          </div>
+          {/* Image removed from here */}
         </div>
       </section>
 
