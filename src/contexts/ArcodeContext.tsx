@@ -26,6 +26,10 @@ interface ArcodeContextType {
   isPanelOpen: boolean;
   togglePanel: () => void;
   setPanelOpen: (isOpen: boolean) => void;
+
+  terminalOutput: string[];
+  addTerminalOutput: (line: string) => void;
+  clearTerminalOutput: () => void;
 }
 
 const ArcodeContext = createContext<ArcodeContextType | undefined>(undefined);
@@ -37,6 +41,7 @@ export const ArcodeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [activeFileId, setActiveFileIdState] = useState<string | null>(null);
   const [activePanel, setActivePanel] = useState<ActivePanel>('terminal');
   const [isPanelOpen, setPanelOpen] = useState<boolean>(true);
+  const [terminalOutput, setTerminalOutput] = useState<string[]>([]);
 
   const findFileRecursive = (entities: ArcodeFileSystemEntity[], fileId: string): ArcodeFile | undefined => {
     for (const entity of entities) {
@@ -52,17 +57,19 @@ export const ArcodeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   };
   
   const getFileById = useCallback((fileId: string): ArcodeFile | undefined => {
-    const openFile = openFiles.find(f => f.id === fileId);
-    if (openFile) return openFile;
+    const openFileInstance = openFiles.find(f => f.id === fileId);
+    if (openFileInstance) return openFileInstance;
+    // If not in openFiles, search in the initial fileSystem structure
     return findFileRecursive(fileSystem, fileId);
   }, [openFiles, fileSystem]);
 
 
   const openFile = useCallback((fileId: string) => {
-    const fileToOpen = getFileById(fileId);
+    const fileToOpen = getFileById(fileId); // Uses the enhanced getFileById
     if (fileToOpen && fileToOpen.type === 'file') {
       setOpenFiles(prevOpenFiles => {
-        if (!prevOpenFiles.find(f => f.id === fileId)) {
+        // Check if the file is already in the openFiles array by its id
+        if (!prevOpenFiles.some(f => f.id === fileId)) {
           return [...prevOpenFiles, fileToOpen];
         }
         return prevOpenFiles; // File already open, no change to openFiles array
@@ -75,13 +82,11 @@ export const ArcodeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     setOpenFiles(prevOpenFiles => {
       const updatedOpenFiles = prevOpenFiles.filter(f => f.id !== fileId);
       if (activeFileId === fileId) {
-        // If the closed file was active, set the new active file
-        // to the first one in the updated list, or null if no files are open.
         setActiveFileIdState(updatedOpenFiles[0]?.id || null);
       }
       return updatedOpenFiles;
     });
-  }, [activeFileId]); // activeFileId is needed for deciding new active file
+  }, [activeFileId]);
 
   const setActiveFileId = useCallback((fileId: string | null) => {
     setActiveFileIdState(fileId);
@@ -89,7 +94,7 @@ export const ArcodeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   const updateFileContent = useCallback((fileId: string, newContent: string) => {
     setOpenFiles(prevOpenFiles =>
-      prevOpenFiles.map(f => (f.id === fileId ? { ...f, content: newContent } : f))
+      prevOpenFiles.map(f => (f.id === fileId ? { ...f, content: newContent, saved: false } : f))
     );
     
     const updateInFileSystemRecursive = (entities: ArcodeFileSystemEntity[]): ArcodeFileSystemEntity[] => {
@@ -104,7 +109,22 @@ export const ArcodeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       });
     };
     setFileSystem(prevFileSystem => updateInFileSystemRecursive(prevFileSystem));
-  }, []); // No dependencies from closure are read, so empty array is correct.
+  }, []);
+
+  const addTerminalOutput = useCallback((line: string) => {
+    setTerminalOutput(prev => [...prev, `${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}: ${line}`]);
+  }, []);
+
+  const clearTerminalOutput = useCallback(() => {
+    setTerminalOutput([`Arcode Terminal session started at ${new Date().toLocaleTimeString()}`]);
+  }, []);
+  
+  useEffect(() => {
+    // Initialize terminal with a welcome message
+    clearTerminalOutput();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
 
   const togglePanel = () => setPanelOpen(prev => !prev);
   
@@ -112,11 +132,11 @@ export const ArcodeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const readme = initialFiles.find(
         (f): f is ArcodeFile => f.type === 'file' && f.name === 'README.md'
     );
-    if (readme) {
+    if (readme && openFiles.length === 0) { // Only open README if no files are open initially
       openFile(readme.id);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run only once on mount. `openFile` is now robust to multiple calls.
+  }, [openFile]); // openFile dependency is okay here
 
   return (
     <ArcodeContext.Provider value={{
@@ -124,7 +144,8 @@ export const ArcodeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       fileSystem, setFileSystem,
       openFiles, activeFileId,
       openFile, closeFile, setActiveFileId, updateFileContent, getFileById,
-      activePanel, setActivePanel, isPanelOpen, togglePanel, setPanelOpen
+      activePanel, setActivePanel, isPanelOpen, togglePanel, setPanelOpen,
+      terminalOutput, addTerminalOutput, clearTerminalOutput
     }}>
       {children}
     </ArcodeContext.Provider>
