@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Code, Bot, Users, Zap, ShieldCheck, Cloud } from 'lucide-react';
 import HeroNavbar from '@/components/layout/HeroNavbar'; 
-import ParticlesBackground from '@/components/effects/ParticlesBackground'; // Import the new component
+import ParticlesBackground from '@/components/effects/ParticlesBackground';
 
 const features = [
   {
@@ -51,12 +51,21 @@ const features = [
 
 export default function HeroPage() {
   return (
-    <div className="flex flex-col min-h-screen bg-background">
+    <div 
+      className="flex flex-col min-h-screen bg-background relative" // Added relative for positioning context if needed
+      style={{
+        // The base dark color #1C1C1C is applied by bg-background
+        // Add a subtle radial glow from top center
+        backgroundImage: `radial-gradient(ellipse at 50% 0%, hsla(270, 15%, 15%, 0.25) 0%, transparent 70%), var(--page-background-image, none)`,
+        backgroundRepeat: 'no-repeat',
+        backgroundPosition: 'top center',
+      }}
+    >
       <HeroNavbar />
-      <ParticlesBackground /> {/* Add particles component here, now global */}
+      <ParticlesBackground /> {/* Particles will render on top of the styled div */}
 
       {/* Hero Section */}
-      <section className="relative py-20 md:py-32 bg-gradient-to-br from-primary/20 via-background to-background/90"> {/* overflow-hidden removed */}
+      <section className="relative py-20 md:py-32"> {/* Removed bg-gradient-to-br from here */}
         <div className="container mx-auto px-6 text-center relative z-10"> {/* Ensure content is above particles */}
           <h1 className="text-4xl md:text-6xl font-bold mb-6 
                          bg-gradient-to-r from-sky-400 via-fuchsia-500 to-teal-400 
@@ -79,7 +88,7 @@ export default function HeroPage() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-16 md:py-24 bg-card relative z-10"> {/* Ensure this section is above any potential overlap */}
+      <section id="features" className="py-16 md:py-24 bg-transparent relative z-10"> {/* Changed bg-card to bg-transparent */}
         <div className="container mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">Why Choose Arcode?</h2>
@@ -89,7 +98,7 @@ export default function HeroPage() {
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, index) => (
-              <Card key={index} className="bg-background shadow-lg hover:shadow-xl transition-shadow duration-300">
+              <Card key={index} className="bg-card/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-shadow duration-300 border border-border/30"> {/* Adjusted card background for better blend */}
                 <CardHeader className="items-center text-center pb-4">
                     <div className="p-3 rounded-full bg-primary/10 mb-3 w-fit">
                         {feature.icon}
@@ -106,7 +115,7 @@ export default function HeroPage() {
       </section>
 
       {/* Call to Action Section */}
-      <section className="py-16 md:py-24 bg-background relative z-10"> {/* Ensure this section is above any potential overlap */}
+      <section className="py-16 md:py-24 bg-transparent relative z-10"> {/* Changed bg-background to bg-transparent */}
         <div className="container mx-auto px-6 text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-6">
             Ready to Elevate Your Coding?
@@ -121,12 +130,12 @@ export default function HeroPage() {
       </section>
 
       {/* Footer */}
-      <footer className="py-8 bg-muted border-t relative z-10"> {/* Ensure this section is above any potential overlap */}
+      <footer className="py-8 bg-muted/30 border-t border-border/30 relative z-10"> {/* Adjusted footer background */}
         <div className="container mx-auto px-6 text-center text-muted-foreground">
           <p>&copy; {new Date().getFullYear()} Arcode. All rights reserved.</p>
-          {/* "Crafted with..." line removed */}
         </div>
       </footer>
     </div>
   );
 }
+
