@@ -3,10 +3,10 @@
 
 import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+// Image import removed
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogIn, UserPlus } from 'lucide-react'; // Briefcase removed
+import { LogIn, UserPlus } from 'lucide-react';
 
 export default function HeroNavbar() {
   const { user, loading } = useAuth();
@@ -14,14 +14,10 @@ export default function HeroNavbar() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-14 items-center px-6">
-        <Link href="/" className="flex items-center space-x-2 mr-6">
-          <Image
-            src="https://i.postimg.cc/q73ZQbyt/arcode.png"
-            alt="Arcode Logo"
-            width={112} // Original 600x150, scaled to height 28 (28 * 4)
-            height={28}
-            className="object-contain"
-          />
+        <Link href="/" className="flex items-center mr-6">
+          <span className="text-2xl font-bold bg-gradient-to-r from-orange-400 via-pink-500 to-purple-600 bg-clip-text text-transparent">
+            Arcode
+          </span>
         </Link>
         <nav className="flex items-center space-x-4 lg:space-x-6 text-sm font-medium">
           <Link href="#features" className="text-muted-foreground transition-colors hover:text-foreground">

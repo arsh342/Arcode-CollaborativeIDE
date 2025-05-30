@@ -51,9 +51,9 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onOpenProject, onMan
             src={project.imageUrl}
             alt={project.name}
             fill
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
             className="object-cover"
             data-ai-hint={project.imageAiHint || "project image"}
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           />
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <span
@@ -598,14 +598,10 @@ export default function DashboardPage() {
     <div className="flex h-screen bg-background">
       <aside className="w-60 bg-card text-card-foreground p-4 flex flex-col justify-between border-r shadow-sm">
         <div>
-          <div className="mb-10 flex items-center space-x-2 px-2">
-             <Image
-                src="https://i.postimg.cc/q73ZQbyt/arcode.png"
-                alt="Arcode Logo"
-                width={128} 
-                height={32}
-                className="object-contain"
-              />
+          <div className="mb-10 flex items-center justify-center px-2">
+             <span className="text-3xl font-extrabold bg-gradient-to-r from-orange-400 via-pink-500 to-purple-600 bg-clip-text text-transparent">
+               Arcode
+             </span>
           </div>
           <nav className="space-y-1">
             <Button variant="secondary" className="w-full justify-start text-sm">

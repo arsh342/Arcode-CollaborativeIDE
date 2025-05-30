@@ -1,9 +1,8 @@
 // src/app/hero/page.tsx
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Code, Bot, Users, Zap, ShieldCheck, Cloud } from 'lucide-react';
@@ -50,23 +49,43 @@ const features = [
 ];
 
 export default function HeroPage() {
+  const [isScrolled, setIsScrolled] = useState(false);
+  const featuresSectionRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 50) {
+        setIsScrolled(true);
+      } else {
+        setIsScrolled(false);
+      }
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const handleLearnMoreClick = (e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => {
+    if (!isScrolled && featuresSectionRef.current) {
+      setIsScrolled(true);
+      // Allow default behavior to scroll after ensuring section is visible
+    }
+  };
+  
   return (
     <div 
-      className="flex flex-col min-h-screen bg-background relative" // Added relative for positioning context if needed
+      className="flex flex-col min-h-screen bg-background relative"
       style={{
-        // The base dark color #1C1C1C is applied by bg-background
-        // Add a subtle radial glow from top center
-        backgroundImage: `radial-gradient(ellipse at 50% 0%, hsla(270, 15%, 15%, 0.25) 0%, transparent 70%), var(--page-background-image, none)`,
+        backgroundImage: `linear-gradient(to bottom right, hsl(240, 10%, 15%) 0%, hsl(var(--background)) 60%, hsl(280, 10%, 12%) 100%)`,
         backgroundRepeat: 'no-repeat',
-        backgroundPosition: 'top center',
+        backgroundAttachment: 'fixed', // Ensure gradient covers full scrollable height
       }}
     >
       <HeroNavbar />
-      <ParticlesBackground /> {/* Particles will render on top of the styled div */}
+      <ParticlesBackground />
 
       {/* Hero Section */}
-      <section className="relative py-20 md:py-32"> {/* Removed bg-gradient-to-br from here */}
-        <div className="container mx-auto px-6 text-center relative z-10"> {/* Ensure content is above particles */}
+      <section className="relative py-20 md:py-32">
+        <div className="container mx-auto px-6 text-center relative z-10">
           <h1 className="text-4xl md:text-6xl font-bold mb-6 
                          bg-gradient-to-r from-sky-400 via-fuchsia-500 to-teal-400 
                          dark:from-sky-300 dark:via-fuchsia-400 dark:to-teal-300
@@ -80,7 +99,7 @@ export default function HeroPage() {
             <Button asChild size="lg" className="shadow-lg">
               <Link href="/signup">Get Started Free</Link>
             </Button>
-            <Button asChild variant="outline" size="lg" className="shadow-lg">
+            <Button asChild variant="outline" size="lg" className="shadow-lg" onClick={(e: any) => handleLearnMoreClick(e)}>
               <Link href="#features">Learn More</Link>
             </Button>
           </div>
@@ -88,34 +107,36 @@ export default function HeroPage() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-16 md:py-24 bg-transparent relative z-10"> {/* Changed bg-card to bg-transparent */}
-        <div className="container mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">Why Choose Arcode?</h2>
-            <p className="text-lg text-muted-foreground max-w-xl mx-auto">
-              Everything you need to develop modern applications, faster and smarter.
-            </p>
+      {isScrolled && (
+        <section id="features" ref={featuresSectionRef} className="py-16 md:py-24 bg-transparent relative z-10">
+          <div className="container mx-auto px-6">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">Why Choose Arcode?</h2>
+              <p className="text-lg text-muted-foreground max-w-xl mx-auto">
+                Everything you need to develop modern applications, faster and smarter.
+              </p>
+            </div>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {features.map((feature, index) => (
+                <Card key={index} className="bg-card/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-shadow duration-300 border border-border/30">
+                  <CardHeader className="items-center text-center pb-4">
+                      <div className="p-3 rounded-full bg-primary/10 mb-3 w-fit">
+                          {feature.icon}
+                      </div>
+                    <CardTitle className="text-xl">{feature.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-center">
+                    <p className="text-muted-foreground">{feature.description}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {features.map((feature, index) => (
-              <Card key={index} className="bg-card/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-shadow duration-300 border border-border/30"> {/* Adjusted card background for better blend */}
-                <CardHeader className="items-center text-center pb-4">
-                    <div className="p-3 rounded-full bg-primary/10 mb-3 w-fit">
-                        {feature.icon}
-                    </div>
-                  <CardTitle className="text-xl">{feature.title}</CardTitle>
-                </CardHeader>
-                <CardContent className="text-center">
-                  <p className="text-muted-foreground">{feature.description}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Call to Action Section */}
-      <section className="py-16 md:py-24 bg-transparent relative z-10"> {/* Changed bg-background to bg-transparent */}
+      <section className="py-16 md:py-24 bg-transparent relative z-10">
         <div className="container mx-auto px-6 text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-6">
             Ready to Elevate Your Coding?
@@ -130,7 +151,7 @@ export default function HeroPage() {
       </section>
 
       {/* Footer */}
-      <footer className="py-8 bg-muted/30 border-t border-border/30 relative z-10"> {/* Adjusted footer background */}
+      <footer className="py-8 bg-muted/30 border-t border-border/30 relative z-10">
         <div className="container mx-auto px-6 text-center text-muted-foreground">
           <p>&copy; {new Date().getFullYear()} Arcode. All rights reserved.</p>
         </div>
@@ -138,4 +159,3 @@ export default function HeroPage() {
     </div>
   );
 }
-
