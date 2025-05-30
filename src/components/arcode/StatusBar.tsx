@@ -6,7 +6,7 @@ import { useArcodeContext } from '@/hooks/useArcodeContext';
 import { Bell, CheckCircle, GitFork, MessageSquare, XCircle, Terminal as TerminalIcon, PanelBottomClose, PanelBottomOpen, Play, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
-import ShareProjectDialog from './ShareProjectDialog'; // Import the new dialog
+import ShareProjectDialog from './ShareProjectDialog';
 import { useToast } from "@/hooks/use-toast";
 
 const StatusBar: React.FC = () => {
@@ -17,7 +17,11 @@ const StatusBar: React.FC = () => {
     togglePanel, 
     activePanel, 
     setActivePanel,
-    addTerminalOutput 
+    terminalSessions,
+    activeTerminalId,
+    addOutputToTerminalSession,
+    createTerminalSession,
+    setActiveTerminalId
   } = useArcodeContext();
   const [currentTime, setCurrentTime] = useState('');
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
@@ -28,43 +32,70 @@ const StatusBar: React.FC = () => {
     const timer = setInterval(() => {
       setCurrentTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
     }, 1000);
-    setCurrentTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })); // Initial time
+    setCurrentTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })); 
     return () => clearInterval(timer);
   }, []);
 
   const activeFile = activeFileId ? getFileById(activeFileId) : null;
   const language = activeFile ? activeFile.language : 'plaintext';
-  // Mock data for status bar items
-  const lineCol = activeFile ? 'Ln 1, Col 1' : '-'; // Placeholder, real implementation would track cursor
+  const lineCol = activeFile ? 'Ln 1, Col 1' : '-'; 
   const encoding = 'UTF-8';
   const branch = 'main';
 
+  const ensureActiveTerminalAndRun = (action: (terminalId: string) => void) => {
+    let currentTerminalId = activeTerminalId;
+
+    if (!currentTerminalId) {
+      if (terminalSessions.length > 0) {
+        currentTerminalId = terminalSessions[0].id;
+        setActiveTerminalId(currentTerminalId);
+      } else {
+        currentTerminalId = createTerminalSession(); // This also sets it active
+      }
+    }
+    
+    if (!isPanelOpen || activePanel !== 'terminal') {
+        setActivePanel('terminal'); // This also opens the panel if closed
+    }
+
+    if (currentTerminalId) {
+      action(currentTerminalId);
+    } else {
+       toast({ title: "Terminal Error", description: "Could not initialize terminal session.", variant: "destructive" });
+    }
+  };
+
+
   const handleRunCode = () => {
     if (activeFile) {
-      addTerminalOutput(`Running ${activeFile.name}...`);
-      if (activeFile.name === 'example.py') {
-        // Simulate python output
-        setTimeout(() => addTerminalOutput('Hello, Arcode User!'), 500);
-        setTimeout(() => addTerminalOutput('Execution finished.'), 1000);
-      } else if (activeFile.name === 'app.js' && activeFile.language === 'javascript') {
-         setTimeout(() => addTerminalOutput('Simulating JS execution: Check browser console for "Hello, Arcode!" (if actual script was run).'), 500);
-         setTimeout(() => addTerminalOutput('Execution finished.'), 1000);
-      }
-      else {
-        setTimeout(() => addTerminalOutput('Execution finished.'), 1000);
-      }
-      toast({ title: "Code Execution", description: `Simulated run for ${activeFile.name}. Check terminal.` });
-      // Ensure terminal is open and active
-      if (!isPanelOpen) togglePanel();
-      if (activePanel !== 'terminal') setActivePanel('terminal');
+      ensureActiveTerminalAndRun((terminalId) => {
+        addOutputToTerminalSession(terminalId, `Running ${activeFile.name}...`);
+        if (activeFile.name === 'example.py') {
+          setTimeout(() => addOutputToTerminalSession(terminalId, 'Hello, Arcode User!'), 500);
+          setTimeout(() => addOutputToTerminalSession(terminalId, 'Execution finished.'), 1000);
+        } else if (activeFile.name === 'app.js' && activeFile.language === 'javascript') {
+           setTimeout(() => addOutputToTerminalSession(terminalId, 'Simulating JS execution: Check browser console for "Hello, Arcode!" (if actual script was run).'), 500);
+           setTimeout(() => addOutputToTerminalSession(terminalId, 'Execution finished.'), 1000);
+        }
+        else {
+          setTimeout(() => addOutputToTerminalSession(terminalId, 'Execution finished.'), 1000);
+        }
+        toast({ title: "Code Execution", description: `Simulated run for ${activeFile.name}. Check terminal.` });
+      });
     } else {
       toast({ title: "No File Selected", description: "Please open a file to run.", variant: "destructive" });
     }
   };
 
   const handleShareProject = () => {
-    setProjectUrl(window.location.href); // Get current project URL
+    if (typeof window !== "undefined") {
+      setProjectUrl(window.location.href);
+    }
     setIsShareDialogOpen(true);
+  };
+
+  const handleTerminalIconClick = () => {
+    setActivePanel('terminal'); // This will open panel if closed, and create/activate terminal if needed
   };
 
 
@@ -91,8 +122,7 @@ const StatusBar: React.FC = () => {
           <span className="border-l h-4 mx-1"></span>
           <Tooltip>
             <TooltipTrigger asChild>
-               {/* GitFork button - keeping existing functionality or as placeholder */}
-              <Button variant="ghost" size="xs" className="p-0 h-auto hover:bg-transparent" onClick={() => { setActivePanel('terminal'); if (!isPanelOpen) togglePanel();}}>
+              <Button variant="ghost" size="xs" className="p-0 h-auto hover:bg-transparent" onClick={handleTerminalIconClick}>
                 <GitFork size={14} className="mr-1" /> {branch}
               </Button>
             </TooltipTrigger>
@@ -109,7 +139,7 @@ const StatusBar: React.FC = () => {
           <span className="hover:bg-muted/80 px-1 cursor-default capitalize min-w-[70px] text-center">{language}</span>
            <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="xs" className="p-0 h-auto hover:bg-transparent" onClick={() => { setActivePanel('terminal'); if (!isPanelOpen) togglePanel();}}>
+              <Button variant="ghost" size="xs" className="p-0 h-auto hover:bg-transparent" onClick={handleTerminalIconClick}>
                 <TerminalIcon size={14} className="mr-1" /> Terminal
               </Button>
             </TooltipTrigger>

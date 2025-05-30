@@ -6,48 +6,63 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useArcodeContext } from '@/hooks/useArcodeContext';
+import type { TerminalSession } from '@/types/arcode';
 
 const TerminalPanel: React.FC = () => {
   const [input, setInput] = useState('');
-  const { terminalOutput, addTerminalOutput, clearTerminalOutput } = useArcodeContext();
+  const { 
+    terminalSessions, 
+    activeTerminalId, 
+    addOutputToTerminalSession, 
+    clearTerminalSessionOutput 
+  } = useArcodeContext();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
+  const activeSession = activeTerminalId ? terminalSessions.find(s => s.id === activeTerminalId) : null;
+
   useEffect(() => {
-    // Scroll to bottom when output changes
     if (scrollAreaRef.current) {
       const viewport = scrollAreaRef.current.querySelector('div[data-radix-scroll-area-viewport]');
       if (viewport) {
         viewport.scrollTop = viewport.scrollHeight;
       }
     }
-  }, [terminalOutput]);
+  }, [activeSession?.output]);
 
   const handleCommand = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() || !activeTerminalId) return;
 
     const command = input.toLowerCase();
-    addTerminalOutput(`user@arcode:~$ ${input}`);
+    addOutputToTerminalSession(activeTerminalId, input, true); // true for isCommand
     
     if (command === 'clear') {
-      clearTerminalOutput();
+      clearTerminalSessionOutput(activeTerminalId);
     } else if (command === 'date') {
-      addTerminalOutput(new Date().toString());
+      addOutputToTerminalSession(activeTerminalId, new Date().toString());
     } else if (command === 'help') {
-      addTerminalOutput('Available commands: clear, date, help, echo [text]');
+      addOutputToTerminalSession(activeTerminalId, 'Available commands: clear, date, help, echo [text]');
     } else if (command.startsWith('echo ')) {
-      addTerminalOutput(input.substring(5));
+      addOutputToTerminalSession(activeTerminalId, input.substring(5));
     } else {
-      addTerminalOutput(`Command not found: ${input}`);
+      addOutputToTerminalSession(activeTerminalId, `Command not found: ${input}`);
     }
     
     setInput('');
   };
 
+  if (!activeSession) {
+    return (
+      <div className="h-full flex flex-col bg-background p-2 font-mono text-xs items-center justify-center text-muted-foreground">
+        No active terminal session. Create one using the '+' button.
+      </div>
+    );
+  }
+
   return (
     <div className="h-full flex flex-col bg-background p-2 font-mono text-xs">
       <ScrollArea className="flex-grow mb-2 pr-2" ref={scrollAreaRef}>
-        {terminalOutput.map((line, index) => (
+        {activeSession.output.map((line, index) => (
           <div key={index} className="whitespace-pre-wrap break-all">{line}</div>
         ))}
       </ScrollArea>
@@ -59,8 +74,9 @@ const TerminalPanel: React.FC = () => {
           onChange={(e) => setInput(e.target.value)}
           className="flex-grow h-7 bg-background focus-visible:ring-1 focus-visible:ring-ring text-xs"
           aria-label="Terminal input"
+          disabled={!activeTerminalId}
         />
-        <Button type="submit" size="sm" variant="ghost" className="h-7 text-xs px-2">Enter</Button>
+        <Button type="submit" size="sm" variant="ghost" className="h-7 text-xs px-2" disabled={!activeTerminalId}>Enter</Button>
       </form>
     </div>
   );

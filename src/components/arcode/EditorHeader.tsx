@@ -8,11 +8,23 @@ import { Input } from '@/components/ui/input';
 import { ArrowLeft, Search, Play, Share2 } from 'lucide-react';
 import { useArcodeContext } from '@/hooks/useArcodeContext';
 import { useToast } from '@/hooks/use-toast';
-import ShareProjectDialog from './ShareProjectDialog'; // Re-use existing dialog
+import ShareProjectDialog from './ShareProjectDialog';
 
 const EditorHeader: React.FC = () => {
   const router = useRouter();
-  const { activeFileId, getFileById, addTerminalOutput, setActivePanel, togglePanel, isPanelOpen, activePanel: currentActivePanel } = useArcodeContext();
+  const { 
+    activeFileId, 
+    getFileById, 
+    addOutputToTerminalSession,
+    setActivePanel, 
+    togglePanel, 
+    isPanelOpen, 
+    activePanel: currentActivePanel,
+    activeTerminalId,
+    terminalSessions,
+    createTerminalSession,
+    setActiveTerminalId
+  } = useArcodeContext();
   const { toast } = useToast();
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const [projectUrl, setProjectUrl] = useState('');
@@ -23,20 +35,39 @@ const EditorHeader: React.FC = () => {
     router.push('/dashboard');
   };
 
+  const ensureActiveTerminalAndRun = (action: (terminalId: string) => void) => {
+    let currentTerminalId = activeTerminalId;
+
+    if (!currentTerminalId) {
+      if (terminalSessions.length > 0) {
+        currentTerminalId = terminalSessions[0].id;
+        setActiveTerminalId(currentTerminalId);
+      } else {
+        currentTerminalId = createTerminalSession(); // This also sets it active
+      }
+    }
+    
+    if (!isPanelOpen || currentActivePanel !== 'terminal') {
+        setActivePanel('terminal'); // This also opens the panel if closed
+    }
+
+    if (currentTerminalId) {
+      action(currentTerminalId);
+    } else {
+       toast({ title: "Terminal Error", description: "Could not initialize terminal session.", variant: "destructive" });
+    }
+  };
+
   const handleRunCode = () => {
     if (activeFile) {
-      addTerminalOutput(`Running ${activeFile.name} from editor header...`);
-      // Simplified simulation logic compared to status bar
-      if (activeFile.name === 'example.py') {
-        setTimeout(() => addTerminalOutput('Hello, Arcode User! (from editor header)'), 500);
-      }
-      setTimeout(() => addTerminalOutput('Execution finished (from editor header).'), 1000);
-      toast({ title: "Code Execution", description: `Simulated run for ${activeFile.name}. Check terminal.` });
-      
-      // Ensure terminal is open and active
-      if (!isPanelOpen) togglePanel();
-      if (currentActivePanel !== 'terminal') setActivePanel('terminal');
-
+      ensureActiveTerminalAndRun((terminalId) => {
+        addOutputToTerminalSession(terminalId, `Running ${activeFile.name} from editor header...`);
+        if (activeFile.name === 'example.py') {
+          setTimeout(() => addOutputToTerminalSession(terminalId, 'Hello, Arcode User! (from editor header)'), 500);
+        }
+        setTimeout(() => addOutputToTerminalSession(terminalId, 'Execution finished (from editor header).'), 1000);
+        toast({ title: "Code Execution", description: `Simulated run for ${activeFile.name}. Check terminal.` });
+      });
     } else {
       toast({ title: "No File Selected", description: "Please open a file to run.", variant: "destructive" });
     }
@@ -64,7 +95,7 @@ const EditorHeader: React.FC = () => {
             type="search"
             placeholder="Search files (soon...)"
             className="h-8 pl-9 text-sm bg-background focus-visible:ring-offset-0 focus-visible:ring-1"
-            disabled // Placeholder functionality
+            disabled
           />
         </div>
       </div>

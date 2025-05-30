@@ -1,3 +1,4 @@
+
 export interface ArcodeFile {
   id: string;
   name: string;
@@ -22,6 +23,12 @@ export type ArcodeFileSystemEntity = ArcodeFile | ArcodeFolder;
 
 export type ActiveView = 'explorer' | 'ai' | 'chat' | 'settings';
 export type ActivePanel = 'terminal' | 'problems' | 'output' | 'debug';
+
+export interface TerminalSession {
+  id: string;
+  name: string;
+  output: string[];
+}
 
 export const initialFiles: ArcodeFileSystemEntity[] = [
   { 
@@ -56,7 +63,7 @@ export const initialFiles: ArcodeFileSystemEntity[] = [
             id: '5', 
             name: 'main.css', 
             type: 'file', 
-            content: 'body {\n  font-family: "Geist", sans-serif;\n  margin: 0;\n  padding: 0;\n  background-color: hsl(var(--background));\n  color: hsl(var(--foreground));\n}\n\nh1 {\n  color: hsl(var(--primary));\n}', 
+            content: 'body {\n  font-family: Arial, Helvetica, sans-serif;\n  margin: 0;\n  padding: 0;\n  background-color: hsl(var(--background));\n  color: hsl(var(--foreground));\n}\n\nh1 {\n  color: hsl(var(--primary));\n}', 
             language: 'css', 
             path: '/src/styles/main.css' 
           }

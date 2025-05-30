@@ -1,7 +1,7 @@
 
 "use client";
 
-import type { ArcodeFile, ArcodeFileSystemEntity, ActiveView, ActivePanel, ArcodeFolder } from '@/types/arcode';
+import type { ArcodeFile, ArcodeFileSystemEntity, ActiveView, ActivePanel, ArcodeFolder, TerminalSession } from '@/types/arcode';
 import { initialFiles } from '@/types/arcode';
 import React, { createContext, useState, useCallback, ReactNode, useEffect } from 'react';
 
@@ -30,11 +30,14 @@ interface ArcodeContextType {
   isRightPanelOpen: boolean;
   setRightPanelOpen: (isOpen: boolean) => void;
 
-  terminalOutput: string[];
-  addTerminalOutput: (line: string) => void;
-  clearTerminalOutput: () => void;
+  terminalSessions: TerminalSession[];
+  activeTerminalId: string | null;
+  createTerminalSession: () => string;
+  closeTerminalSession: (sessionId: string) => void;
+  setActiveTerminalId: (sessionId: string | null) => void;
+  addOutputToTerminalSession: (sessionId: string, line: string, isCommand?: boolean) => void;
+  clearTerminalSessionOutput: (sessionId: string) => void;
 
-  // New file/folder operations
   createFileInExplorer: () => void;
   createFolderInExplorer: () => void;
   importFilesFromComputer: (fileList: FileList | null) => void;
@@ -43,10 +46,8 @@ interface ArcodeContextType {
 
 const ArcodeContext = createContext<ArcodeContextType | undefined>(undefined);
 
-// Helper to generate unique IDs
-const newFileId = (): string => crypto.randomUUID();
+const newId = (): string => crypto.randomUUID();
 
-// Helper to guess language from extension
 const getLanguageFromExtension = (fileName: string): string => {
   const extension = fileName.split('.').pop()?.toLowerCase();
   switch (extension) {
@@ -77,10 +78,13 @@ export const ArcodeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [fileSystem, setFileSystem] = useState<ArcodeFileSystemEntity[]>(initialFiles);
   const [openFiles, setOpenFiles] = useState<ArcodeFile[]>([]);
   const [activeFileId, setActiveFileIdState] = useState<string | null>(null);
-  const [activePanel, setActivePanel] = useState<ActivePanel>('terminal');
+  
+  const [activePanel, setActivePanelState] = useState<ActivePanel>('terminal');
   const [isPanelOpen, setPanelOpen] = useState<boolean>(true); 
   const [isRightPanelOpen, setRightPanelOpen] = useState<boolean>(false); 
-  const [terminalOutput, setTerminalOutput] = useState<string[]>([]);
+
+  const [terminalSessions, setTerminalSessions] = useState<TerminalSession[]>([]);
+  const [activeTerminalId, setActiveTerminalIdState] = useState<string | null>(null);
 
   const findFileRecursive = (entities: ArcodeFileSystemEntity[], fileId: string): ArcodeFile | undefined => {
     for (const entity of entities) {
@@ -131,7 +135,7 @@ export const ArcodeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   const updateFileContent = useCallback((fileId: string, newContent: string) => {
     setOpenFiles(prevOpenFiles =>
-      prevOpenFiles.map(f => (f.id === fileId ? { ...f, content: newContent } : f)) // Removed 'saved' flag for simplicity
+      prevOpenFiles.map(f => (f.id === fileId ? { ...f, content: newContent } : f))
     );
     
     const updateInFileSystemRecursive = (entities: ArcodeFileSystemEntity[]): ArcodeFileSystemEntity[] => {
@@ -148,22 +152,94 @@ export const ArcodeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     setFileSystem(prevFileSystem => updateInFileSystemRecursive(prevFileSystem));
   }, []);
 
-  const addTerminalOutput = useCallback((line: string) => {
-    setTerminalOutput(prev => [...prev, `${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}: ${line}`]);
-  }, []);
+  const createTerminalSession = useCallback(() => {
+    const newSessionId = `term-${newId()}`;
+    let newSessionName = `Terminal 1`;
+    let counter = 1;
+    // Ensure unique name
+    while(terminalSessions.some(s => s.name === newSessionName)) {
+        counter++;
+        newSessionName = `Terminal ${counter}`;
+    }
 
-  const clearTerminalOutput = useCallback(() => {
-    setTerminalOutput([`Arcode Terminal session started at ${new Date().toLocaleTimeString()}`]);
+    const newSession: TerminalSession = {
+      id: newSessionId,
+      name: newSessionName,
+      output: [`${newSessionName} session started at ${new Date().toLocaleTimeString()}`],
+    };
+    setTerminalSessions(prev => [...prev, newSession]);
+    setActiveTerminalIdState(newSessionId);
+    return newSessionId;
+  }, [terminalSessions]);
+
+  useEffect(() => {
+    if (terminalSessions.length === 0) {
+      createTerminalSession();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Create initial terminal session on mount
+
+
+  const closeTerminalSession = useCallback((sessionId: string) => {
+    setTerminalSessions(prevSessions => {
+      const sessionToCloseIndex = prevSessions.findIndex(s => s.id === sessionId);
+      if (sessionToCloseIndex === -1) return prevSessions;
+
+      const updatedSessions = prevSessions.filter(s => s.id !== sessionId);
+      
+      if (activeTerminalId === sessionId) {
+        if (updatedSessions.length > 0) {
+          // Try to activate the session before the closed one, or the first one
+          const newActiveIndex = Math.max(0, sessionToCloseIndex -1);
+          setActiveTerminalIdState(updatedSessions[newActiveIndex]?.id || updatedSessions[0]?.id || null);
+        } else {
+          setActiveTerminalIdState(null); // No sessions left
+        }
+      }
+      return updatedSessions;
+    });
+  }, [activeTerminalId]);
+
+  const setActiveTerminalId = useCallback((sessionId: string | null) => {
+    setActiveTerminalIdState(sessionId);
   }, []);
   
-  useEffect(() => {
-    clearTerminalOutput();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const addOutputToTerminalSession = useCallback((sessionId: string, line: string, isCommand: boolean = false) => {
+    setTerminalSessions(prevSessions =>
+      prevSessions.map(session =>
+        session.id === sessionId
+          ? { ...session, output: [...session.output, isCommand ? `user@arcode:~$ ${line}` : `${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}: ${line}`] }
+          : session
+      )
+    );
   }, []);
-
+  
+  const clearTerminalSessionOutput = useCallback((sessionId: string) => {
+    setTerminalSessions(prevSessions =>
+      prevSessions.map(session => {
+        if (session.id === sessionId) {
+          return { ...session, output: [`${session.name} session started at ${new Date().toLocaleTimeString()}`] };
+        }
+        return session;
+      })
+    );
+  }, []);
 
   const togglePanel = () => setPanelOpen(prev => !prev); 
   
+  const setActivePanel = useCallback((panel: ActivePanel) => {
+    setActivePanelState(panel);
+    if (panel === 'terminal' && !isPanelOpen) {
+      setPanelOpen(true);
+    }
+    if (panel === 'terminal' && terminalSessions.length === 0) {
+        createTerminalSession();
+    } else if (panel === 'terminal' && !activeTerminalId && terminalSessions.length > 0) {
+        setActiveTerminalIdState(terminalSessions[0].id);
+    }
+  }, [isPanelOpen, terminalSessions, activeTerminalId, createTerminalSession]);
+
+
   useEffect(() => {
     const readme = initialFiles.find(
         (f): f is ArcodeFile => f.type === 'file' && f.name === 'README.md'
@@ -172,16 +248,11 @@ export const ArcodeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       openFile(readme.id);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fileSystem]); // Depend on fileSystem so if initialFiles changes, it re-evaluates
-
-  // --- New File/Folder Operations ---
+  }, [fileSystem]);
 
   const addEntityToRoot = (entity: ArcodeFileSystemEntity) => {
     setFileSystem(prevFileSystem => {
-      // Check for name collision at root
       if (prevFileSystem.some(e => e.name === entity.name && e.path === entity.path)) {
-        // Simple collision handling: append a number or alert. For now, alert.
-        // A more robust solution would be to rename or allow overwriting.
         alert(`An item named "${entity.name}" already exists at the root. Please choose a different name or location.`);
         return prevFileSystem;
       }
@@ -193,7 +264,7 @@ export const ArcodeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const fileName = window.prompt("Enter new file name (e.g., myFile.txt):");
     if (fileName && fileName.trim() !== "") {
       const newFile: ArcodeFile = {
-        id: newFileId(),
+        id: newId(),
         name: fileName.trim(),
         content: '',
         language: getLanguageFromExtension(fileName.trim()),
@@ -208,7 +279,7 @@ export const ArcodeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const folderName = window.prompt("Enter new folder name:");
     if (folderName && folderName.trim() !== "") {
       const newFolder: ArcodeFolder = {
-        id: newFileId(),
+        id: newId(),
         name: folderName.trim(),
         path: `/${folderName.trim()}`,
         type: 'folder',
@@ -225,7 +296,7 @@ export const ArcodeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       const file = fileList[i];
       const content = await file.text();
       newFiles.push({
-        id: newFileId(),
+        id: newId(),
         name: file.name,
         content: content,
         language: getLanguageFromExtension(file.name),
@@ -248,34 +319,24 @@ export const ArcodeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   const importFolderFromComputerFlat = useCallback(async (fileList: FileList | null) => {
     if (!fileList) return;
-    // For flat import, this is identical to importing multiple files.
-    // webkitRelativePath is ignored here.
     const newFiles: ArcodeFile[] = [];
     for (let i = 0; i < fileList.length; i++) {
       const file = fileList[i];
-      // Skip if it's likely a hidden system file (e.g., .DS_Store)
       if (file.name.startsWith('.')) continue;
-      
-      // Sometimes directories themselves appear as files with size 0 and no type in the list
-      // We try to filter these out. A more robust check might involve trying to read them.
       if (file.size === 0 && !file.type && file.name === file.webkitRelativePath.split('/').pop()) {
-          // This heuristic tries to identify empty directory entries often included in folder uploads
-          // and skip them. This is not foolproof.
-          // If it's a file without an extension but has size 0, it might be an empty directory.
           if (!file.name.includes('.')) { 
             console.log(`Skipping potential directory entry: ${file.name}`);
             continue;
           }
       }
-
       try {
         const content = await file.text();
         newFiles.push({
-          id: newFileId(),
-          name: file.name, // Use the simple file name for flat import
+          id: newId(),
+          name: file.name, 
           content: content,
           language: getLanguageFromExtension(file.name),
-          path: `/${file.name}`, // Place at root
+          path: `/${file.name}`, 
           type: 'file',
         });
       } catch (error) {
@@ -304,7 +365,7 @@ export const ArcodeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       openFile, closeFile, setActiveFileId, updateFileContent, getFileById,
       activePanel, setActivePanel, isPanelOpen, togglePanel, setPanelOpen,
       isRightPanelOpen, setRightPanelOpen,
-      terminalOutput, addTerminalOutput, clearTerminalOutput,
+      terminalSessions, activeTerminalId, createTerminalSession, closeTerminalSession, setActiveTerminalId, addOutputToTerminalSession, clearTerminalSessionOutput,
       createFileInExplorer, createFolderInExplorer, importFilesFromComputer, importFolderFromComputerFlat
     }}>
       {children}
