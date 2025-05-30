@@ -17,9 +17,16 @@ import { useToast } from '@/hooks/use-toast';
 interface ChatMessage {
   id: string;
   userId: string;
-  userName?: string; // For storing sender's name, if available
+  userName?: string;
   text: string;
-  timestamp: Timestamp | Date | null; // Firestore timestamp or client date before sync
+  timestamp: Timestamp | Date | null;
+}
+
+interface Collaborator {
+  id: string;
+  name: string;
+  avatarUrl?: string;
+  isOnline: boolean;
 }
 
 const ChatPanel: React.FC = () => {
@@ -32,6 +39,25 @@ const ChatPanel: React.FC = () => {
   const projectId = params.projectId as string;
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  // Placeholder for collaborators - in a real app, this would come from a backend/DB
+  const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
+
+  useEffect(() => {
+    if (user) {
+      // Mock collaborators: current user + a couple of others
+      const mockCollaborators: Collaborator[] = [
+        { id: user.uid, name: user.displayName || user.email?.split('@')[0] || 'You', avatarUrl: user.photoURL || undefined, isOnline: true },
+        { id: 'collab2', name: 'Jane Doe', avatarUrl: 'https://placehold.co/40x40.png?text=JD', isOnline: false },
+        { id: 'collab3', name: 'Bob Smith', avatarUrl: 'https://placehold.co/40x40.png?text=BS', isOnline: true },
+      ];
+      // Filter out the current user if they are already in the mock list from a different source
+      setCollaborators(mockCollaborators.filter((c, index, self) => index === self.findIndex((t) => t.id === c.id || (t.id === user.uid && c.id === user.uid ))));
+    } else {
+      setCollaborators([]);
+    }
+  }, [user]);
+
 
   useEffect(() => {
     if (!projectId || !user) {
@@ -60,7 +86,6 @@ const ChatPanel: React.FC = () => {
   }, [projectId, user, toast]);
 
   useEffect(() => {
-    // Scroll to bottom when messages change
     if (scrollAreaRef.current) {
       const viewport = scrollAreaRef.current.querySelector('div[data-radix-scroll-area-viewport]');
       if (viewport) {
@@ -77,7 +102,7 @@ const ChatPanel: React.FC = () => {
     try {
       await addDoc(collection(db, 'projects', projectId, 'chatMessages'), {
         userId: user.uid,
-        userName: user.displayName || user.email?.split('@')[0] || 'Anonymous', // Use displayName, fallback to email part or Anonymous
+        userName: user.displayName || user.email?.split('@')[0] || 'Anonymous',
         text: newMessage,
         timestamp: serverTimestamp(),
       });
@@ -107,7 +132,39 @@ const ChatPanel: React.FC = () => {
         <CardTitle className="text-xs font-medium uppercase tracking-wider">Project Chat</CardTitle>
       </CardHeader>
       <CardContent className="flex-grow p-0 flex flex-col overflow-hidden">
-        {/* Removed Online Users section */}
+        {/* Collaborators Section - Placeholder */}
+        <div className="px-3 py-2 border-b">
+          <h4 className="text-xs font-semibold mb-1.5 text-muted-foreground">Collaborators</h4>
+          <div className="flex items-center space-x-2 overflow-x-auto pb-1">
+            {collaborators.map(collab => (
+              <div key={collab.id} className="flex flex-col items-center text-center w-14" title={collab.name}>
+                <div className="relative">
+                  <Avatar className="h-8 w-8 mb-0.5" data-ai-hint="person avatar">
+                    {collab.avatarUrl ? <AvatarImage src={collab.avatarUrl} alt={collab.name} /> : null }
+                    <AvatarFallback>{collab.name.substring(0, 1).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  {collab.isOnline && (
+                    <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-card" />
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground truncate w-full">{collab.name === (user?.displayName || user?.email?.split('@')[0]) ? 'You' : collab.name.split(' ')[0]}</p>
+              </div>
+            ))}
+            {collaborators.length === 0 && user && (
+                 <div key={user.uid} className="flex flex-col items-center text-center w-14" title={user.displayName || user.email?.split('@')[0]}>
+                    <div className="relative">
+                        <Avatar className="h-8 w-8 mb-0.5" data-ai-hint="person avatar">
+                            {user.photoURL ? <AvatarImage src={user.photoURL} alt={user.displayName || 'Your avatar'} /> : null }
+                            <AvatarFallback>{(user.displayName || user.email || 'U').substring(0,1).toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-card" />
+                    </div>
+                     <p className="text-xs text-muted-foreground truncate w-full">You</p>
+                 </div>
+            )}
+          </div>
+        </div>
+
         <ScrollArea className="flex-grow p-3 space-y-3" ref={scrollAreaRef}>
           {isLoadingMessages && (
             <div className="flex justify-center items-center h-full">
@@ -123,7 +180,7 @@ const ChatPanel: React.FC = () => {
             <div key={msg.id} className={`flex gap-2 ${msg.userId === user?.uid ? 'justify-end' : ''}`}>
               {msg.userId !== user?.uid && (
                 <Avatar className="h-8 w-8" data-ai-hint="person avatar">
-                  {/* Future: Add AvatarImage if user profiles with images are implemented */}
+                   <AvatarImage src={collaborators.find(c => c.id === msg.userId)?.avatarUrl || `https://placehold.co/40x40.png?text=${(msg.userName || 'U').charAt(0).toUpperCase()}`} alt={msg.userName || 'User'} />
                   <AvatarFallback>{msg.userName ? msg.userName.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
                 </Avatar>
               )}
@@ -164,3 +221,5 @@ const ChatPanel: React.FC = () => {
 };
 
 export default ChatPanel;
+
+    
