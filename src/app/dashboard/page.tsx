@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Briefcase, Settings, PlusCircle, FolderOpen, ExternalLink, Loader2, LogOut, Code2, Users, Trash2, Copy, Check, MailIcon } from 'lucide-react';
+import { Settings, PlusCircle, FolderOpen, ExternalLink, Loader2, LogOut, Code2, Users, Trash2, Copy, Check, MailIcon } from 'lucide-react'; // Briefcase removed
 import type { ProjectType } from '@/types/dashboard';
 import { useToast } from "@/hooks/use-toast";
 import { db } from '@/firebase/config';
@@ -598,8 +598,13 @@ export default function DashboardPage() {
       <aside className="w-60 bg-card text-card-foreground p-4 flex flex-col justify-between border-r shadow-sm">
         <div>
           <div className="mb-10 flex items-center space-x-2 px-2">
-            <Briefcase className="h-7 w-7 text-primary" />
-            <h2 className="text-xl font-bold text-foreground">Arcode</h2>
+             <Image
+                src="https://i.postimg.cc/q73ZQbyt/arcode.png"
+                alt="Arcode Logo"
+                width={128} // Original 600x150, scaled to height 32 (32 * 4)
+                height={32}
+                className="object-contain"
+              />
           </div>
           <nav className="space-y-1">
             <Button variant="secondary" className="w-full justify-start text-sm">
