@@ -44,11 +44,7 @@ export default function HeroNavbar() {
           </span>
         </Link>
         <nav className="flex items-center space-x-4 lg:space-x-6 text-sm font-medium">
-          {/* Features link removed */}
           {/* Placeholder for future links */}
-          {/* <Link href="/pricing" className="text-muted-foreground transition-colors hover:text-foreground">
-            Pricing
-          </Link> */}
         </nav>
         <div className="flex flex-1 items-center justify-end space-x-2">
           {!loading && user ? (

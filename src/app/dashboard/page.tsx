@@ -4,6 +4,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
+import Link from 'next/link'; // Added Link import
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -599,9 +600,11 @@ export default function DashboardPage() {
       <aside className="w-60 bg-card text-card-foreground p-4 flex flex-col justify-between border-r shadow-sm">
         <div>
           <div className="mb-10 flex items-center justify-center px-2">
-             <span className="text-3xl font-extrabold bg-gradient-to-r from-sky-400 via-yellow-400 to-pink-500 dark:from-sky-300 dark:via-yellow-300 dark:to-pink-400 bg-clip-text text-transparent">
-               Arcode
-             </span>
+            <Link href="/">
+              <span className="text-3xl font-extrabold bg-gradient-to-r from-sky-400 via-yellow-400 to-pink-500 dark:from-sky-300 dark:via-yellow-300 dark:to-pink-400 bg-clip-text text-transparent">
+                Arcode
+              </span>
+            </Link>
           </div>
           <nav className="space-y-1">
             <Button variant="secondary" className="w-full justify-start text-sm">
