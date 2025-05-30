@@ -53,10 +53,10 @@ export default function HeroPage() {
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <HeroNavbar />
+      <ParticlesBackground /> {/* Add particles component here, now global */}
 
       {/* Hero Section */}
-      <section className="relative py-20 md:py-32 bg-gradient-to-br from-primary/20 via-background to-background/90 overflow-hidden"> {/* Added relative and overflow-hidden */}
-        <ParticlesBackground /> {/* Add particles component here */}
+      <section className="relative py-20 md:py-32 bg-gradient-to-br from-primary/20 via-background to-background/90"> {/* overflow-hidden removed */}
         <div className="container mx-auto px-6 text-center relative z-10"> {/* Ensure content is above particles */}
           <h1 className="text-4xl md:text-6xl font-bold mb-6 
                          bg-gradient-to-r from-sky-400 via-fuchsia-500 to-teal-400 
@@ -75,7 +75,6 @@ export default function HeroPage() {
               <Link href="#features">Learn More</Link>
             </Button>
           </div>
-          {/* Image removed from here */}
         </div>
       </section>
 
@@ -125,7 +124,7 @@ export default function HeroPage() {
       <footer className="py-8 bg-muted border-t relative z-10"> {/* Ensure this section is above any potential overlap */}
         <div className="container mx-auto px-6 text-center text-muted-foreground">
           <p>&copy; {new Date().getFullYear()} Arcode. All rights reserved.</p>
-          <p className="text-sm mt-1">Crafted with ❤️ by Firebase Studio</p>
+          {/* "Crafted with..." line removed */}
         </div>
       </footer>
     </div>
