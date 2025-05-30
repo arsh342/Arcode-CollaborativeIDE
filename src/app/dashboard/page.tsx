@@ -8,15 +8,16 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Briefcase, Settings, PlusCircle, FolderOpen, ExternalLink, Loader2, LogOut, Code2, Users, Trash2, UserPlus } from 'lucide-react';
+import { Briefcase, Settings, PlusCircle, FolderOpen, ExternalLink, Loader2, LogOut, Code2, Users, Trash2 } from 'lucide-react';
 import type { ProjectType } from '@/types/dashboard';
 import { useToast } from "@/hooks/use-toast";
 import { db } from '@/firebase/config';
-import { collection, addDoc, getDocs, query, orderBy, serverTimestamp, Timestamp, where, doc, updateDoc, arrayUnion, arrayRemove, FieldValue } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, orderBy, serverTimestamp, Timestamp, where, doc, updateDoc, arrayUnion, arrayRemove, FieldValue, deleteDoc } from 'firebase/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -24,10 +25,11 @@ interface ProjectCardProps {
   project: ProjectType;
   onOpenProject: (projectId: string) => void;
   onManageProject: (project: ProjectType) => void;
+  onInitiateDelete: (project: ProjectType) => void; // New prop
   currentUserId: string | null;
 }
 
-const ProjectCard: React.FC<ProjectCardProps> = ({ project, onOpenProject, onManageProject, currentUserId }) => {
+const ProjectCard: React.FC<ProjectCardProps> = ({ project, onOpenProject, onManageProject, onInitiateDelete, currentUserId }) => {
   const getLastModifiedString = (lastModified: ProjectType['lastModified']): string => {
     if (lastModified instanceof Timestamp) {
       return lastModified.toDate().toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' });
@@ -66,12 +68,17 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onOpenProject, onMan
       </CardContent>
       <CardFooter className="p-4 border-t flex items-center gap-2">
         <Button onClick={() => onOpenProject(project.id)} className="flex-1" variant="outline">
-          <ExternalLink className="mr-2 h-4 w-4" /> Open Project
+          <ExternalLink className="mr-2 h-4 w-4" /> Open
         </Button>
         {isOwner && (
-          <Button onClick={() => onManageProject(project)} className="flex-1" variant="secondary">
-            <Users className="mr-2 h-4 w-4" /> Manage
-          </Button>
+          <>
+            <Button onClick={() => onManageProject(project)} className="flex-grow" variant="secondary">
+              <Users className="mr-2 h-4 w-4" /> Manage
+            </Button>
+            <Button onClick={() => onInitiateDelete(project)} variant="destructive" size="icon" className="shrink-0" aria-label="Delete project">
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </>
         )}
       </CardFooter>
     </Card>
@@ -177,7 +184,7 @@ interface ManageCollaboratorsDialogProps {
   project: ProjectType | null;
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onCollaboratorsUpdate: () => void; // Callback to refresh project list
+  onCollaboratorsUpdate: () => void; 
 }
 
 const ManageCollaboratorsDialog: React.FC<ManageCollaboratorsDialogProps> = ({ project, isOpen, onOpenChange, onCollaboratorsUpdate }) => {
@@ -204,7 +211,7 @@ const ManageCollaboratorsDialog: React.FC<ManageCollaboratorsDialogProps> = ({ p
         memberUids: arrayRemove(collaboratorUid)
       });
       toast({ title: "Collaborator Removed", description: `User ${collaboratorUid.substring(0,6)}... removed.` });
-      onCollaboratorsUpdate(); // Refresh dashboard
+      onCollaboratorsUpdate(); 
     } catch (error: any) {
       console.error("Error removing collaborator:", error);
       toast({ title: "Error", description: error.message || "Could not remove collaborator.", variant: "destructive" });
@@ -233,16 +240,14 @@ const ManageCollaboratorsDialog: React.FC<ManageCollaboratorsDialogProps> = ({ p
       const projectRef = doc(db, 'projects', project.id);
       const collaboratorId = newCollaboratorUid.trim();
       
-      // For now, we assume the UID is valid. A real system would verify user existence.
-      // And ensure the user is not already a collaborator.
       await updateDoc(projectRef, {
-        [`collaborators.${collaboratorId}`]: 'developer' as 'developer', // Explicitly type as 'developer'
+        [`collaborators.${collaboratorId}`]: 'developer' as 'developer',
         memberUids: arrayUnion(collaboratorId)
       });
       
       toast({ title: "Collaborator Added", description: `User ${collaboratorId.substring(0,6)}... added as a developer.` });
       setNewCollaboratorUid('');
-      onCollaboratorsUpdate(); // Refresh dashboard
+      onCollaboratorsUpdate(); 
     } catch (error: any) {
       console.error("Error adding collaborator:", error);
       toast({ title: "Error", description: error.message || "Could not add collaborator.", variant: "destructive" });
@@ -322,6 +327,38 @@ const ManageCollaboratorsDialog: React.FC<ManageCollaboratorsDialogProps> = ({ p
   );
 };
 
+interface DeleteProjectDialogProps {
+  isOpen: boolean;
+  onOpenChange: (isOpen: boolean) => void;
+  onConfirm: () => Promise<void>;
+  isDeleting: boolean;
+  projectName: string | undefined;
+}
+
+const DeleteProjectDialog: React.FC<DeleteProjectDialogProps> = ({ isOpen, onOpenChange, onConfirm, isDeleting, projectName }) => {
+  return (
+    <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This action cannot be undone. This will permanently delete the project
+            <strong className="mx-1">{projectName ? `"${projectName}"` : "this project"}</strong>
+            and remove all its data from our servers.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirm} disabled={isDeleting} className={buttonVariants({ variant: "destructive" })}>
+            {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isDeleting ? "Deleting..." : "Delete Project"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+};
+
 
 export default function DashboardPage() {
   const [projects, setProjects] = useState<ProjectType[]>([]);
@@ -335,13 +372,16 @@ export default function DashboardPage() {
   const [selectedProjectForManagement, setSelectedProjectForManagement] = useState<ProjectType | null>(null);
   const [isManageCollaboratorsDialogOpen, setIsManageCollaboratorsDialogOpen] = useState(false);
 
+  const [projectToDelete, setProjectToDelete] = useState<ProjectType | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
 
   const fetchProjects = useCallback(async () => {
     if (!user) return;
     setIsLoading(true);
     try {
       const projectsCollection = collection(db, 'projects');
-      // Query projects where the current user is in the memberUids array
       const q = query(projectsCollection, where("memberUids", "array-contains", user.uid), orderBy('lastModified', 'desc'));
       const querySnapshot = await getDocs(q);
       const fetchedProjects: ProjectType[] = [];
@@ -380,12 +420,12 @@ export default function DashboardPage() {
         name: projectData.name,
         description: projectData.description,
         language: projectData.language,
-        imageUrl: `https://placehold.co/600x400.png`,
+        imageUrl: `https://source.unsplash.com/random/600x400/?gradient,abstract`, // Updated image source
         lastModified: serverTimestamp() as FieldValue,
         ownerId: user.uid,
-        collaborators: { [user.uid]: 'owner' as 'owner' }, // Explicitly type 'owner'
+        collaborators: { [user.uid]: 'owner' as 'owner' },
         memberUids: [user.uid],
-        imageAiHint: projectData.name.toLowerCase().split(' ').slice(0, 2).join(' ') || 'project concept'
+        imageAiHint: "gradient abstract" // Updated hint
       };
       await addDoc(collection(db, 'projects'), newProjectData);
       await fetchProjects(); 
@@ -420,7 +460,33 @@ export default function DashboardPage() {
 
   const handleManageProject = (project: ProjectType) => {
     setSelectedProjectForManagement(project);
+    setProjectToDelete(null); // Ensure delete dialog state is reset
+    setIsDeleteDialogOpen(false);
     setIsManageCollaboratorsDialogOpen(true);
+  };
+
+  const handleInitiateDeleteProject = (project: ProjectType) => {
+    setSelectedProjectForManagement(null); // Ensure manage dialog state is reset
+    setProjectToDelete(project);
+    setIsManageCollaboratorsDialogOpen(false);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDeleteProject = async () => {
+    if (!projectToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deleteDoc(doc(db, 'projects', projectToDelete.id));
+      toast({ title: "Project Deleted", description: `"${projectToDelete.name}" has been successfully deleted.` });
+      fetchProjects(); 
+    } catch (error: any) {
+      console.error("Error deleting project: ", error);
+      toast({ title: "Error Deleting Project", description: error.message || "Could not delete the project.", variant: "destructive" });
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteDialogOpen(false);
+      setProjectToDelete(null);
+    }
   };
 
   if (authLoading || (!authLoading && !user)) {
@@ -504,6 +570,7 @@ export default function DashboardPage() {
                   project={project}
                   onOpenProject={handleOpenProject}
                   onManageProject={handleManageProject}
+                  onInitiateDelete={handleInitiateDeleteProject}
                   currentUserId={user?.uid || null}
                 />
               ))}
@@ -523,12 +590,38 @@ export default function DashboardPage() {
           isOpen={isManageCollaboratorsDialogOpen}
           onOpenChange={(isOpen) => {
             setIsManageCollaboratorsDialogOpen(isOpen);
-            if (!isOpen) setSelectedProjectForManagement(null); // Clear selected project when dialog closes
+            if (!isOpen) setSelectedProjectForManagement(null); 
           }}
           onCollaboratorsUpdate={fetchProjects}
         />
       )}
+      <DeleteProjectDialog
+        isOpen={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={handleConfirmDeleteProject}
+        isDeleting={isDeleting}
+        projectName={projectToDelete?.name}
+      />
     </div>
   );
 }
 
+// Helper to get buttonVariants for AlertDialogAction (if not directly available)
+import { cva } from 'class-variance-authority';
+const buttonVariants = cva(
+  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+  {
+    variants: {
+      variant: {
+        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+        outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        ghost: "hover:bg-accent hover:text-accent-foreground",
+        link: "text-primary underline-offset-4 hover:underline",
+      },
+      size: { /* ... */ },
+    },
+    defaultVariants: { variant: "default" },
+  }
+);
