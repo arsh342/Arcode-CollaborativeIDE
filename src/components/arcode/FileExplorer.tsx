@@ -157,7 +157,7 @@ const FileExplorer: React.FC = () => {
           ))}
         </div>
         <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFilesSelected} multiple />
-        <input type="file" ref={folderInputRef} style={{ display: 'none' }} onChange={handleFolderSelected} webkitdirectory directory />
+        <input type="file" ref={folderInputRef} style={{ display: 'none' }} onChange={handleFolderSelected} webkitdirectory="true" directory="true" />
       </Card>
     </TooltipProvider>
   );
