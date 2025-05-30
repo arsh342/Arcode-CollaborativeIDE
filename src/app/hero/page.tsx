@@ -88,7 +88,7 @@ export default function HeroPage() {
     <div 
       className="flex flex-col min-h-screen bg-background relative"
       style={{
-        backgroundImage: `radial-gradient(ellipse at top center, hsl(270, 8%, 20%) 0%, hsl(var(--background)) 60%)`,
+        backgroundImage: `linear-gradient(to bottom, hsl(270, 8%, 20%) 0%, hsl(var(--background)) 70%)`,
         backgroundRepeat: 'no-repeat',
         backgroundAttachment: 'fixed', 
       }}
