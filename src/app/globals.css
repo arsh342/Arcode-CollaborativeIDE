@@ -80,7 +80,7 @@ body {
 
 .particle {
   position: absolute;
-  background-color: rgba(200, 200, 255, 0.2); /* Soft, light blueish particles */
+  background-color: rgba(220, 220, 255, 0.35); /* Increased opacity and slightly brighter for more glow */
   border-radius: 50%; /* Ensure all particles are circular */
   animation: fall linear infinite;
   will-change: transform, opacity; /* Performance hint */
