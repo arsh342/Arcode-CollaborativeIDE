@@ -67,7 +67,8 @@ const AiAssistantPanel: React.FC = () => {
       toast({ title: "AI Error", description: "Failed to process your request.", variant: "destructive" });
     } finally {
       setIsLoading(false);
-      setAdditionalInput(""); // Clear additional input after action
+      // Keep additionalInput for debug/refactor if user wants to re-run with slight modifications
+      // setAdditionalInput(""); 
     }
   };
 
@@ -85,13 +86,29 @@ const AiAssistantPanel: React.FC = () => {
         </CardTitle>
       </CardHeader>
       <CardContent className="flex-grow p-3 flex flex-col gap-3 overflow-hidden">
-        <div className="flex gap-2">
+        {aiResponse ? (
+          <div className="flex-grow flex flex-col overflow-hidden border rounded-md">
+            <Label className="text-xs px-3 py-1.5 border-b bg-muted/30">AI Response:</Label>
+            <ScrollArea className="flex-grow p-3 bg-muted/10">
+              <pre className="whitespace-pre-wrap text-xs font-mono">{aiResponse}</pre>
+            </ScrollArea>
+          </div>
+        ) : (
+           <div className="flex-grow flex items-center justify-center">
+             <p className="text-xs text-muted-foreground text-center">
+              {activeFile ? `Select an action below to run on '${activeFile.name}'.` : "Open a file and select an action below."}
+            </p>
+           </div>
+        )}
+      </CardContent>
+      <CardFooter className="p-3 border-t flex flex-col gap-3">
+        <div className="flex gap-2 w-full">
           {(["explain", "debug", "refactor"] as AiAction[]).map(action => (
             <Button
               key={action}
               variant={currentAction === action ? "default" : "outline"}
               size="sm"
-              onClick={() => { setCurrentAction(action); setAiResponse(""); setAdditionalInput("");}}
+              onClick={() => { setCurrentAction(action); setAiResponse(""); /* Don't clear additionalInput here */ }}
               className="capitalize flex-1 text-xs"
             >
               {action}
@@ -99,21 +116,6 @@ const AiAssistantPanel: React.FC = () => {
           ))}
         </div>
         
-        {aiResponse && (
-          <div className="flex-grow flex flex-col mt-2 overflow-hidden border rounded-md">
-            <Label className="text-xs px-3 py-1.5 border-b bg-muted/30">AI Response:</Label>
-            <ScrollArea className="flex-grow p-3 bg-muted/10">
-              <pre className="whitespace-pre-wrap text-xs font-mono">{aiResponse}</pre>
-            </ScrollArea>
-          </div>
-        )}
-        {!aiResponse && <div className="flex-grow"></div>} {/* Spacer to push input to bottom */}
-
-         {!activeFile && !aiResponse && (
-          <p className="text-xs text-muted-foreground text-center mt-4 flex-grow flex items-center justify-center">Open a file to use the AI Assistant.</p>
-        )}
-      </CardContent>
-      <CardFooter className="p-3 border-t flex flex-col gap-2">
         { (currentAction === "debug" || currentAction === "refactor") && (
             <div className="space-y-1 w-full">
                 <Label htmlFor="additional-input" className="text-xs">{getAdditionalInputLabel()}</Label>
@@ -131,10 +133,12 @@ const AiAssistantPanel: React.FC = () => {
             {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
             {isLoading ? `Processing ${currentAction}...` : `Run ${currentAction} on current file`}
         </Button>
-        <p className="text-xs text-muted-foreground text-center w-full">AI operates on the currently active file.</p>
+        {activeFile && <p className="text-xs text-muted-foreground text-center w-full">AI operates on the currently active file: {activeFile.name}</p>}
       </CardFooter>
     </Card>
   );
 };
 
 export default AiAssistantPanel;
+
+    
