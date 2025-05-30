@@ -70,7 +70,7 @@ export default function HeroPage() {
   useEffect(() => {
     const intervalId = setInterval(() => {
       setCurrentArcodeWordIndex((prevIndex) => (prevIndex + 1) % arcodeVariations.length);
-    }, 2500); // Change word every 2.5 seconds
+    }, 1500); // Changed animation speed to 1.5 seconds
 
     return () => clearInterval(intervalId);
   }, []);
@@ -105,7 +105,7 @@ export default function HeroPage() {
                          bg-clip-text text-transparent">
             Build, Collaborate, Innovate with <span 
               key={currentArcodeDisplayWord} /* Key forces re-render for potential animation reset */
-              className="arcode-animated-text bg-gradient-to-r from-orange-400 via-pink-500 to-purple-600 dark:from-orange-300 dark:via-pink-400 dark:to-purple-500 bg-clip-text text-transparent inline-block"
+              className="arcode-animated-text bg-gradient-to-r from-orange-400 via-pink-500 to-purple-600 dark:from-orange-300 dark:via-pink-400 dark:to-purple-500 bg-clip-text text-transparent block mt-1 md:mt-2"
             >
               {currentArcodeDisplayWord}
             </span>
