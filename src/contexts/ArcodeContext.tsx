@@ -1,7 +1,7 @@
 
 "use client";
 
-import type { ArcodeFile, ArcodeFileSystemEntity, ActiveView, ActivePanel } from '@/types/arcode';
+import type { ArcodeFile, ArcodeFileSystemEntity, ActiveView, ActivePanel, ArcodeFolder } from '@/types/arcode';
 import { initialFiles } from '@/types/arcode';
 import React, { createContext, useState, useCallback, ReactNode, useEffect } from 'react';
 
@@ -33,9 +33,44 @@ interface ArcodeContextType {
   terminalOutput: string[];
   addTerminalOutput: (line: string) => void;
   clearTerminalOutput: () => void;
+
+  // New file/folder operations
+  createFileInExplorer: () => void;
+  createFolderInExplorer: () => void;
+  importFilesFromComputer: (fileList: FileList | null) => void;
+  importFolderFromComputerFlat: (fileList: FileList | null) => void;
 }
 
 const ArcodeContext = createContext<ArcodeContextType | undefined>(undefined);
+
+// Helper to generate unique IDs
+const newFileId = (): string => crypto.randomUUID();
+
+// Helper to guess language from extension
+const getLanguageFromExtension = (fileName: string): string => {
+  const extension = fileName.split('.').pop()?.toLowerCase();
+  switch (extension) {
+    case 'js':
+    case 'jsx':
+      return 'javascript';
+    case 'ts':
+    case 'tsx':
+      return 'typescript';
+    case 'py':
+      return 'python';
+    case 'html':
+      return 'html';
+    case 'css':
+      return 'css';
+    case 'json':
+      return 'json';
+    case 'md':
+      return 'markdown';
+    default:
+      return 'plaintext';
+  }
+};
+
 
 export const ArcodeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [activeView, setActiveView] = useState<ActiveView>('explorer');
@@ -43,8 +78,8 @@ export const ArcodeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [openFiles, setOpenFiles] = useState<ArcodeFile[]>([]);
   const [activeFileId, setActiveFileIdState] = useState<string | null>(null);
   const [activePanel, setActivePanel] = useState<ActivePanel>('terminal');
-  const [isPanelOpen, setPanelOpen] = useState<boolean>(true); // Bottom panel
-  const [isRightPanelOpen, setRightPanelOpen] = useState<boolean>(false); // New Right panel
+  const [isPanelOpen, setPanelOpen] = useState<boolean>(true); 
+  const [isRightPanelOpen, setRightPanelOpen] = useState<boolean>(false); 
   const [terminalOutput, setTerminalOutput] = useState<string[]>([]);
 
   const findFileRecursive = (entities: ArcodeFileSystemEntity[], fileId: string): ArcodeFile | undefined => {
@@ -96,7 +131,7 @@ export const ArcodeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   const updateFileContent = useCallback((fileId: string, newContent: string) => {
     setOpenFiles(prevOpenFiles =>
-      prevOpenFiles.map(f => (f.id === fileId ? { ...f, content: newContent, saved: false } : f))
+      prevOpenFiles.map(f => (f.id === fileId ? { ...f, content: newContent } : f)) // Removed 'saved' flag for simplicity
     );
     
     const updateInFileSystemRecursive = (entities: ArcodeFileSystemEntity[]): ArcodeFileSystemEntity[] => {
@@ -127,17 +162,139 @@ export const ArcodeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   }, []);
 
 
-  const togglePanel = () => setPanelOpen(prev => !prev); // Toggles bottom panel
+  const togglePanel = () => setPanelOpen(prev => !prev); 
   
   useEffect(() => {
     const readme = initialFiles.find(
         (f): f is ArcodeFile => f.type === 'file' && f.name === 'README.md'
     );
-    if (readme && openFiles.length === 0) { 
+    if (readme && openFiles.length === 0 && fileSystem.some(f => f.id === readme.id)) { 
       openFile(readme.id);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openFile]);
+  }, [fileSystem]); // Depend on fileSystem so if initialFiles changes, it re-evaluates
+
+  // --- New File/Folder Operations ---
+
+  const addEntityToRoot = (entity: ArcodeFileSystemEntity) => {
+    setFileSystem(prevFileSystem => {
+      // Check for name collision at root
+      if (prevFileSystem.some(e => e.name === entity.name && e.path === entity.path)) {
+        // Simple collision handling: append a number or alert. For now, alert.
+        // A more robust solution would be to rename or allow overwriting.
+        alert(`An item named "${entity.name}" already exists at the root. Please choose a different name or location.`);
+        return prevFileSystem;
+      }
+      return [...prevFileSystem, entity];
+    });
+  };
+
+  const createFileInExplorer = useCallback(() => {
+    const fileName = window.prompt("Enter new file name (e.g., myFile.txt):");
+    if (fileName && fileName.trim() !== "") {
+      const newFile: ArcodeFile = {
+        id: newFileId(),
+        name: fileName.trim(),
+        content: '',
+        language: getLanguageFromExtension(fileName.trim()),
+        path: `/${fileName.trim()}`,
+        type: 'file',
+      };
+      addEntityToRoot(newFile);
+    }
+  }, []);
+
+  const createFolderInExplorer = useCallback(() => {
+    const folderName = window.prompt("Enter new folder name:");
+    if (folderName && folderName.trim() !== "") {
+      const newFolder: ArcodeFolder = {
+        id: newFileId(),
+        name: folderName.trim(),
+        path: `/${folderName.trim()}`,
+        type: 'folder',
+        children: [],
+      };
+      addEntityToRoot(newFolder);
+    }
+  }, []);
+
+  const importFilesFromComputer = useCallback(async (fileList: FileList | null) => {
+    if (!fileList) return;
+    const newFiles: ArcodeFile[] = [];
+    for (let i = 0; i < fileList.length; i++) {
+      const file = fileList[i];
+      const content = await file.text();
+      newFiles.push({
+        id: newFileId(),
+        name: file.name,
+        content: content,
+        language: getLanguageFromExtension(file.name),
+        path: `/${file.name}`,
+        type: 'file',
+      });
+    }
+    setFileSystem(prevFileSystem => {
+        const updatedFileSystem = [...prevFileSystem];
+        newFiles.forEach(nf => {
+            if (!updatedFileSystem.some(e => e.name === nf.name && e.path === nf.path)) {
+                updatedFileSystem.push(nf);
+            } else {
+                 console.warn(`File named "${nf.name}" already exists at the root. Skipping duplicate.`);
+            }
+        });
+        return updatedFileSystem;
+    });
+  }, []);
+
+  const importFolderFromComputerFlat = useCallback(async (fileList: FileList | null) => {
+    if (!fileList) return;
+    // For flat import, this is identical to importing multiple files.
+    // webkitRelativePath is ignored here.
+    const newFiles: ArcodeFile[] = [];
+    for (let i = 0; i < fileList.length; i++) {
+      const file = fileList[i];
+      // Skip if it's likely a hidden system file (e.g., .DS_Store)
+      if (file.name.startsWith('.')) continue;
+      
+      // Sometimes directories themselves appear as files with size 0 and no type in the list
+      // We try to filter these out. A more robust check might involve trying to read them.
+      if (file.size === 0 && !file.type && file.name === file.webkitRelativePath.split('/').pop()) {
+          // This heuristic tries to identify empty directory entries often included in folder uploads
+          // and skip them. This is not foolproof.
+          // If it's a file without an extension but has size 0, it might be an empty directory.
+          if (!file.name.includes('.')) { 
+            console.log(`Skipping potential directory entry: ${file.name}`);
+            continue;
+          }
+      }
+
+      try {
+        const content = await file.text();
+        newFiles.push({
+          id: newFileId(),
+          name: file.name, // Use the simple file name for flat import
+          content: content,
+          language: getLanguageFromExtension(file.name),
+          path: `/${file.name}`, // Place at root
+          type: 'file',
+        });
+      } catch (error) {
+        console.warn(`Could not read file ${file.name} (likely a directory or special file). Skipping. Error:`, error);
+      }
+    }
+     setFileSystem(prevFileSystem => {
+        const updatedFileSystem = [...prevFileSystem];
+        newFiles.forEach(nf => {
+            if (!updatedFileSystem.some(e => e.name === nf.name && e.path === nf.path)) {
+                updatedFileSystem.push(nf);
+            } else {
+                 console.warn(`File named "${nf.name}" already exists at the root. Skipping duplicate.`);
+            }
+        });
+        return updatedFileSystem;
+    });
+  }, []);
+
 
   return (
     <ArcodeContext.Provider value={{
@@ -147,7 +304,8 @@ export const ArcodeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       openFile, closeFile, setActiveFileId, updateFileContent, getFileById,
       activePanel, setActivePanel, isPanelOpen, togglePanel, setPanelOpen,
       isRightPanelOpen, setRightPanelOpen,
-      terminalOutput, addTerminalOutput, clearTerminalOutput
+      terminalOutput, addTerminalOutput, clearTerminalOutput,
+      createFileInExplorer, createFolderInExplorer, importFilesFromComputer, importFolderFromComputerFlat
     }}>
       {children}
     </ArcodeContext.Provider>
