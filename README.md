@@ -147,8 +147,3 @@ A brief overview of the key directories:
 ## Contributing
 
 Currently, contributions are managed by the project maintainers. If you have suggestions or find bugs, please open an issue on the GitHub repository.
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE.md file (if it exists) for details, or assume it's proprietary if no license file is present.
-```
