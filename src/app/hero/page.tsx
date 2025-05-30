@@ -42,7 +42,7 @@ const features = [
   },
 ];
 
-const arcodeVariations = ["Arcode", "Arcøde", "Arcodé", "Λrcode", "Ar코드", "Ar{code}", "Ärcode", "Ārcōde", "Arコーデ", "อาโค้ด", "代码弧", "Аркод", "Arkodez", "Արկոդ", "Αρκόντ", "ארקוד"];
+const arcodeVariations = ["Arcode", "Arcøde", "Arcodé", "Λrcode", "Arコード", "Ar{code}", "Ärcode", "Ārcōde", "Arコーデ", "อาโค้ด", "代码弧", "Аркод", "Arkodez", "Արկոդ", "Αρκόντ", "ארקוד"];
 
 
 export default function HeroPage() {
@@ -96,7 +96,7 @@ export default function HeroPage() {
       </section>
       
       {/* Features Section */}
-      <section id="features" className="py-16 md:py-24 bg-muted/20 relative z-10">
+      <section id="features" className="py-16 md:py-24 relative z-10"> {/* Removed bg-muted/20 */}
         <div className="container mx-auto px-6">
           <div className="text-center mb-12 md:mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-foreground">
