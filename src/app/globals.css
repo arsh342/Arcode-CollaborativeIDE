@@ -19,10 +19,10 @@ body {
     --popover-foreground: 0 0% 95%;
 
     --primary: 0 0% 100%; /* White background for primary buttons */
-    --primary-foreground: 211 100% 50%; /* Blue text for primary buttons */
+    --primary-foreground: 0 0% 10%; /* Dark text for primary buttons */
 
     --secondary: 0 0% 100%; /* White background for secondary buttons */
-    --secondary-foreground: 133 78% 56%; /* Green text for secondary buttons */
+    --secondary-foreground: 0 0% 10%; /* Dark text for secondary buttons */
 
     --muted: 0 0% 20%; /* Lighter shade of new background */
     --muted-foreground: 0 0% 55%; /* #8C8C8C */
@@ -31,7 +31,7 @@ body {
     --accent-foreground: 0 0% 10%; /* Dark text for electric blue accent */
 
     --destructive: 0 0% 100%; /* White background for destructive buttons */
-    --destructive-foreground: 0 100% 65%; /* Red text for destructive buttons */
+    --destructive-foreground: 0 0% 10%; /* Dark text for destructive buttons */
 
     --border: 0 0% 20%; /* Subtle border */
     --input: 0 0% 20%; /* Input field background */
