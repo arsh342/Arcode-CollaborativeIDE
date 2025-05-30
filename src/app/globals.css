@@ -19,10 +19,10 @@ body {
     --popover-foreground: 0 0% 95%;
 
     --primary: 211 100% 50%; /* #007BFF */
-    --primary-foreground: 0 0% 95%; /* Light text for blue primary */
+    --primary-foreground: 0 0% 100%; /* Pure White */
 
     --secondary: 133 78% 56%; /* #39E75F (Vibrant Green) */
-    --secondary-foreground: 0 0% 10%; /* Dark text for green secondary */
+    --secondary-foreground: 0 0% 100%; /* Pure White */
 
     --muted: 0 0% 20%; /* Lighter shade of new background */
     --muted-foreground: 0 0% 55%; /* #8C8C8C */
@@ -31,7 +31,7 @@ body {
     --accent-foreground: 0 0% 10%; /* Dark text for electric blue accent */
 
     --destructive: 0 100% 65%; /* #FF4C4C (Bright Red) */
-    --destructive-foreground: 0 0% 95%;
+    --destructive-foreground: 0 0% 100%; /* Pure White */
 
     --border: 0 0% 20%; /* Subtle border */
     --input: 0 0% 20%; /* Input field background */
