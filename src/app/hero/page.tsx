@@ -9,64 +9,14 @@ import { Code, Bot, Users, Zap, ShieldCheck, Cloud } from 'lucide-react';
 import HeroNavbar from '@/components/layout/HeroNavbar'; 
 import ParticlesBackground from '@/components/effects/ParticlesBackground';
 
-const features = [
-  {
-    icon: <Code size={32} className="text-primary" />,
-    title: 'Intuitive Code Editor',
-    description: 'Experience a feature-rich Monaco-based editor with syntax highlighting, autocompletion, and VS Code-like experience.',
-    aiHint: 'code editor interface'
-  },
-  {
-    icon: <Bot size={32} className="text-primary" />,
-    title: 'AI-Powered Assistant',
-    description: 'Leverage Genkit AI to explain, debug, and refactor your code, boosting productivity and learning.',
-    aiHint: 'artificial intelligence robot'
-  },
-  {
-    icon: <Users size={32} className="text-primary" />,
-    title: 'Project Management',
-    description: 'Organize your work with a clear project dashboard, create new projects, and manage your files efficiently.',
-    aiHint: 'team collaboration'
-  },
-  {
-    icon: <Zap size={32} className="text-primary" />,
-    title: 'Firebase Integrated',
-    description: 'Seamless Firebase authentication and Firestore database integration for robust and scalable applications.',
-    aiHint: 'database server'
-  },
-  {
-    icon: <ShieldCheck size={32} className="text-primary" />,
-    title: 'Secure Authentication',
-    description: 'Robust sign-in options including email/password, Google, and GitHub, ensuring your projects are safe.',
-    aiHint: 'security shield'
-  },
-  {
-    icon: <Cloud size={32} className="text-primary" />,
-    title: 'Cloud Based IDE',
-    description: 'Access your projects and code from anywhere, on any device, without complex local setups.',
-    aiHint: 'cloud computing'
-  },
-];
+// features array removed as the section is removed
 
 const arcodeVariations = ["Arcode", "Arcøde", "Arcodé", "Λrcode", "Ar코드", "Ar{code}", "Ärcode", "Ārcōde", "Arコーデ", "อาโค้ด", "代码弧", "Аркод", "Arkodez", "Արկոդ", "Αρκόντ", "ארקוד"];
 
 
 export default function HeroPage() {
-  const [isScrolled, setIsScrolled] = useState(false);
-  const featuresSectionRef = useRef<HTMLElement>(null);
+  // isScrolled and featuresSectionRef related logic removed
   const [currentArcodeWordIndex, setCurrentArcodeWordIndex] = useState(0);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > 50) {
-        setIsScrolled(true);
-      } else {
-        setIsScrolled(false);
-      }
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -76,12 +26,6 @@ export default function HeroPage() {
     return () => clearInterval(intervalId);
   }, []);
 
-  const handleLearnMoreClick = (e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => {
-    if (!isScrolled && featuresSectionRef.current) {
-      setIsScrolled(true); 
-    }
-  };
-  
   const currentArcodeDisplayWord = arcodeVariations[currentArcodeWordIndex];
 
   return (
@@ -117,47 +61,12 @@ export default function HeroPage() {
             <Button asChild size="lg" className="shadow-lg">
               <Link href="/signup">Get Started Free</Link>
             </Button>
-            <Button asChild variant="outline" size="lg" className="shadow-lg" onClick={(e: any) => handleLearnMoreClick(e)}>
-              <Link href="#features">Learn More</Link>
-            </Button>
+            {/* Learn More button removed */}
           </div>
         </div>
       </section>
       
-      <section 
-        id="features" 
-        ref={featuresSectionRef} 
-        className={`py-16 md:py-24 bg-transparent relative z-10 transition-opacity duration-700 ease-out ${isScrolled ? 'opacity-100 animate-fadeInUp' : 'opacity-0'}`}
-        style={!isScrolled ? { visibility: 'hidden' } : {}}
-      >
-        {isScrolled && ( 
-          <>
-            <div className="container mx-auto px-6">
-              <div className="text-center mb-16">
-                <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">Why Choose Arcode?</h2>
-                <p className="text-lg text-muted-foreground max-w-xl mx-auto">
-                  Everything you need to develop modern applications, faster and smarter.
-                </p>
-              </div>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {features.map((feature, index) => (
-                  <Card key={index} className="bg-card/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-shadow duration-300 border border-border/30">
-                    <CardHeader className="items-center text-center pb-4">
-                        <div className="p-3 rounded-full bg-primary/10 mb-3 w-fit">
-                            {feature.icon}
-                        </div>
-                      <CardTitle className="text-xl">{feature.title}</CardTitle>
-                    </CardHeader>
-                    <CardContent className="text-center">
-                      <p className="text-muted-foreground">{feature.description}</p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          </>
-        )}
-      </section>
+      {/* Features Section Removed */}
       
 
       {/* Call to Action Section */}
@@ -184,4 +93,3 @@ export default function HeroPage() {
     </div>
   );
 }
-
