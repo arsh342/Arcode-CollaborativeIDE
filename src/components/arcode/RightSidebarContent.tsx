@@ -5,7 +5,7 @@ import React from 'react';
 import { useArcodeContext } from '@/hooks/useArcodeContext';
 import AiAssistantPanel from './AiAssistantPanel';
 import ChatPanel from './ChatPanel';
-import { ScrollArea } from '@/components/ui/scroll-area';
+// ScrollArea import removed
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const RightSidebarContent: React.FC = () => {
@@ -35,9 +35,9 @@ const RightSidebarContent: React.FC = () => {
 
   return (
     <div className="h-full w-full bg-card flex flex-col overflow-hidden">
-      <ScrollArea className="flex-grow">
-        {renderView()}
-      </ScrollArea>
+      {/* The component returned by renderView (e.g., ChatPanel or AiAssistantPanel)
+          should itself be h-full and manage internal scrolling if needed. */}
+      {renderView()}
     </div>
   );
 };
