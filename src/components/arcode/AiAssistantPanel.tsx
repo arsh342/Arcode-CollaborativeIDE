@@ -8,18 +8,21 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Wand2 } from 'lucide-react';
+import { Loader2, Wand2, BrainCircuit } from 'lucide-react'; // Added BrainCircuit
 import { useToast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Added Select
 
 import { explainCode, ExplainCodeInput, ExplainCodeOutput } from '@/ai/flows/explain-code';
 import { debugCode, DebugCodeInput, DebugCodeOutput } from '@/ai/flows/debug-code';
 import { refactorCode, RefactorCodeInput, RefactorCodeOutput } from '@/ai/flows/refactor-code';
 
 type AiAction = "explain" | "debug" | "refactor";
+type AiModel = "gemini-default" | "openai-placeholder"; // Define AI model types
 
 const AiAssistantPanel: React.FC = () => {
   const { activeFileId, getFileById } = useArcodeContext();
   const [currentAction, setCurrentAction] = useState<AiAction>("explain");
+  const [selectedModel, setSelectedModel] = useState<AiModel>("gemini-default"); // State for selected model
   const [isLoading, setIsLoading] = useState(false);
   const [aiResponse, setAiResponse] = useState<string>("");
   const [additionalInput, setAdditionalInput] = useState<string>("");
@@ -35,11 +38,15 @@ const AiAssistantPanel: React.FC = () => {
     setIsLoading(true);
     setAiResponse("");
 
+    toast({ title: "AI Action Started", description: `Using ${selectedModel} for ${currentAction} on ${activeFile.name}.`});
+
     try {
       let result: ExplainCodeOutput | DebugCodeOutput | RefactorCodeOutput | null = null;
       const code = activeFile.content;
       const language = activeFile.language;
 
+      // Note: Actual model switching based on `selectedModel` would need Genkit flow modifications.
+      // This example continues to use the default configured Genkit model.
       if (currentAction === "explain") {
         const input: ExplainCodeInput = { code, language };
         result = await explainCode(input);
@@ -60,15 +67,13 @@ const AiAssistantPanel: React.FC = () => {
         const refactorResult = result as RefactorCodeOutput;
         setAiResponse(`Explanation:\n${refactorResult.explanation}\n\nRefactored Code:\n\`\`\`${language}\n${refactorResult.refactoredCode}\n\`\`\``);
       }
-      toast({ title: "AI Task Completed", description: `Successfully processed ${currentAction} action.` });
+      toast({ title: "AI Task Completed", description: `Successfully processed ${currentAction} action with ${selectedModel}.` });
     } catch (error) {
       console.error("AI Action Error:", error);
       setAiResponse("An error occurred while processing your request.");
       toast({ title: "AI Error", description: "Failed to process your request.", variant: "destructive" });
     } finally {
       setIsLoading(false);
-      // Keep additionalInput for debug/refactor if user wants to re-run with slight modifications
-      // setAdditionalInput(""); 
     }
   };
 
@@ -88,7 +93,7 @@ const AiAssistantPanel: React.FC = () => {
       <CardContent className="flex-grow p-3 flex flex-col gap-3 overflow-hidden">
         {aiResponse ? (
           <div className="flex-grow flex flex-col overflow-hidden border rounded-md">
-            <Label className="text-xs px-3 py-1.5 border-b bg-muted/30">AI Response:</Label>
+            <Label className="text-xs px-3 py-1.5 border-b bg-muted/30">AI Response ({selectedModel.startsWith('gemini') ? 'Gemini' : 'OpenAI'}):</Label>
             <ScrollArea className="flex-grow p-3 bg-muted/10">
               <pre className="whitespace-pre-wrap text-xs font-mono">{aiResponse}</pre>
             </ScrollArea>
@@ -96,24 +101,51 @@ const AiAssistantPanel: React.FC = () => {
         ) : (
            <div className="flex-grow flex items-center justify-center">
              <p className="text-xs text-muted-foreground text-center">
-              {activeFile ? `Select an action below to run on '${activeFile.name}'.` : "Open a file and select an action below."}
+              {activeFile ? `Select an action and model below to run on '${activeFile.name}'.` : "Open a file and select an action and model below."}
             </p>
            </div>
         )}
       </CardContent>
       <CardFooter className="p-3 border-t flex flex-col gap-3">
-        <div className="flex gap-2 w-full">
+        <div className="grid grid-cols-3 gap-2 w-full">
           {(["explain", "debug", "refactor"] as AiAction[]).map(action => (
             <Button
               key={action}
               variant={currentAction === action ? "default" : "outline"}
               size="sm"
-              onClick={() => { setCurrentAction(action); setAiResponse(""); /* Don't clear additionalInput here */ }}
-              className="capitalize flex-1 text-xs"
+              onClick={() => { setCurrentAction(action); setAiResponse(""); }}
+              className="capitalize text-xs"
+              disabled={isLoading}
             >
               {action}
             </Button>
           ))}
+        </div>
+        
+        <div className="w-full space-y-1">
+          <Label htmlFor="ai-model-select" className="text-xs">Select AI Model:</Label>
+          <Select 
+            value={selectedModel} 
+            onValueChange={(value) => setSelectedModel(value as AiModel)}
+            disabled={isLoading}
+          >
+            <SelectTrigger id="ai-model-select" className="h-9 text-xs">
+              <SelectValue placeholder="Select AI Model" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="gemini-default" className="text-xs">
+                <div className="flex items-center gap-2">
+                  <BrainCircuit size={14} className="text-blue-500" /> Gemini (Google AI)
+                </div>
+              </SelectItem>
+              <SelectItem value="openai-placeholder" className="text-xs">
+                <div className="flex items-center gap-2">
+                  <BrainCircuit size={14} className="text-green-500" /> OpenAI GPT-3.5 (Placeholder)
+                </div>
+              </SelectItem>
+              {/* Add more models here as needed */}
+            </SelectContent>
+          </Select>
         </div>
         
         { (currentAction === "debug" || currentAction === "refactor") && (
@@ -131,7 +163,7 @@ const AiAssistantPanel: React.FC = () => {
         )}
         <Button onClick={handleAiAction} disabled={isLoading || !activeFile} className="w-full">
             {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
-            {isLoading ? `Processing ${currentAction}...` : `Run ${currentAction} on current file`}
+            {isLoading ? `Processing with ${selectedModel.startsWith('gemini') ? 'Gemini' : 'OpenAI'}...` : `Run ${currentAction} on current file`}
         </Button>
         {activeFile && <p className="text-xs text-muted-foreground text-center w-full">AI operates on the currently active file: {activeFile.name}</p>}
       </CardFooter>
@@ -140,5 +172,3 @@ const AiAssistantPanel: React.FC = () => {
 };
 
 export default AiAssistantPanel;
-
-    
